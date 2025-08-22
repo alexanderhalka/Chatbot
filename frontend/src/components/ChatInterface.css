@@ -282,3 +282,35 @@
     height: 18px;
   }
 }
+
+.limit-notice {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.limit-notice p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.message.error {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.message.error .message-text {
+  color: white;
+  font-weight: 500;
+}
+
+.message.error .message-timestamp {
+  color: rgba(255, 255, 255, 0.8);
+}

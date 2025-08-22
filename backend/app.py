@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 import openai
-from datetime import datetime
+from datetime import datetime, date
 
 # Load environment variables
 load_dotenv()
@@ -39,13 +39,59 @@ User: "I'm really not okay. My family just died."
 Assistant: "I'm so sorry. That's an unbearable loss. If you want to talk about what happened, I'm here. I can also share resources or coping steps if that would help."
 """
 
-# In-memory storage for conversation history
+# Constants
+FREE_DAILY_MSG_LIMIT = 10
+
+# In-memory storage for conversation history and user limits
 # In production, you'd want to use a database
 conversation_history = {}
+user_daily_counts = {}  # userId -> {date -> count}
+
+def get_user_id_from_header():
+    """Extract user ID from x-user header"""
+    user_header = request.headers.get('x-user', '')
+    if user_header.startswith('test-'):
+        return user_header
+    return 'test-anonymous'
+
+def check_daily_limit(user_id):
+    """Check if user has reached daily message limit"""
+    today = date.today().isoformat()
+    
+    if user_id not in user_daily_counts:
+        user_daily_counts[user_id] = {}
+    
+    if today not in user_daily_counts[user_id]:
+        user_daily_counts[user_id][today] = 0
+    
+    return user_daily_counts[user_id][today] >= FREE_DAILY_MSG_LIMIT
+
+def increment_daily_count(user_id):
+    """Increment user's daily message count"""
+    today = date.today().isoformat()
+    
+    if user_id not in user_daily_counts:
+        user_daily_counts[user_id] = {}
+    
+    if today not in user_daily_counts[user_id]:
+        user_daily_counts[user_id][today] = 0
+    
+    user_daily_counts[user_id][today] += 1
 
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
+        # Get user ID from header
+        user_id = get_user_id_from_header()
+        
+        # Check daily limit
+        if check_daily_limit(user_id):
+            return jsonify({
+                'error': 'Daily limit reached. Upgrade to keep chatting.',
+                'limit': FREE_DAILY_MSG_LIMIT,
+                'user_id': user_id
+            }), 429
+        
         data = request.get_json()
         user_message = data.get('message', '')
         session_id = data.get('session_id', 'default')
@@ -53,10 +99,13 @@ def chat():
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
         
+        # Increment daily count
+        increment_daily_count(user_id)
+        
         if session_id not in conversation_history:
             conversation_history[session_id] = [{
                 "role": "system",
-                "content": SYSTEM_PROMPT_TEXT  # paste the prompt above here
+                "content": SYSTEM_PROMPT_TEXT
             }]
 
         conversation_history[session_id].append({"role": "user", "content": user_message})
@@ -84,11 +133,32 @@ def chat():
         return jsonify({
             'response': ai,
             'status': 'success',
-            'session_id': session_id
+            'session_id': session_id,
+            'user_id': user_id,
+            'daily_count': user_daily_counts[user_id][date.today().isoformat()]
         })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/user/status', methods=['GET'])
+def user_status():
+    """Get user's current status and daily count"""
+    user_id = get_user_id_from_header()
+    today = date.today().isoformat()
+    
+    if user_id not in user_daily_counts:
+        user_daily_counts[user_id] = {}
+    
+    if today not in user_daily_counts[user_id]:
+        user_daily_counts[user_id][today] = 0
+    
+    return jsonify({
+        'user_id': user_id,
+        'daily_count': user_daily_counts[user_id][today],
+        'daily_limit': FREE_DAILY_MSG_LIMIT,
+        'remaining': FREE_DAILY_MSG_LIMIT - user_daily_counts[user_id][today]
+    })
 
 @app.route('/clear-memory', methods=['POST'])
 def clear_memory():

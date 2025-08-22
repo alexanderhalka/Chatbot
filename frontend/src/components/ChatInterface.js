@@ -38,6 +38,10 @@ const ChatInterface = ({
     }
   };
 
+  const isLimitReached = messages.some(msg => 
+    msg.sender === 'error' && msg.text.includes('Daily limit reached')
+  );
+
   return (
     <div className="chat-container">
       <div className="messages-container">
@@ -85,12 +89,13 @@ const ChatInterface = ({
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type your message here..."
+            placeholder={isLimitReached ? "Daily limit reached. Change your username to continue chatting." : "Type your message here..."}
             rows="1"
+            disabled={isLimitReached}
           />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={!inputMessage.trim() || isLoading || isLimitReached}
             className="send-button"
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -98,6 +103,11 @@ const ChatInterface = ({
             </svg>
           </button>
         </div>
+        {isLimitReached && (
+          <div className="limit-notice">
+            <p>💡 <strong>Tip:</strong> Click "Logout" in the header to change your username and continue chatting!</p>
+          </div>
+        )}
       </form>
     </div>
   );
