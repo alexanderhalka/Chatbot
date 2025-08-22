@@ -89,7 +89,7 @@ const ChatInterface = ({
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isLimitReached ? "Daily limit reached. Change your username to continue chatting." : "Type your message here..."}
+            placeholder={isLimitReached ? "Daily limit reached." : "Type your message here..."}
             rows="1"
             disabled={isLimitReached}
           />
@@ -103,11 +103,7 @@ const ChatInterface = ({
             </svg>
           </button>
         </div>
-        {isLimitReached && (
-          <div className="limit-notice">
-            <p>💡 <strong>Tip:</strong> Click "Logout" in the header to change your username and continue chatting!</p>
-          </div>
-        )}
+
       </form>
     </div>
   );

@@ -82,9 +82,9 @@
 }
 
 .message.error .message-content {
-  background: #fee;
-  color: #c53030;
-  border: 1px solid #fed7d7;
+  background: #fff3cd;
+  color: #000000;
+  border: 1px solid #ffeaa7;
   border-radius: 12px;
   text-align: center;
 }
@@ -284,33 +284,22 @@
 }
 
 .limit-notice {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
   color: white;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  margin-top: 0.75rem;
   text-align: center;
-  font-size: 0.875rem;
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
+  border: 2px solid #ff6b35;
 }
 
 .limit-notice p {
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.5;
+  font-size: 1.1rem;
 }
 
-.message.error {
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
-}
 
-.message.error .message-text {
-  color: white;
-  font-weight: 500;
-}
-
-.message.error .message-timestamp {
-  color: rgba(255, 255, 255, 0.8);
-}
