@@ -42,6 +42,31 @@ function App() {
     setActiveChatId(chatId);
   };
 
+  const deleteChat = (chatId) => {
+    setChats(prev => {
+      const filteredChats = prev.filter(chat => chat.id !== chatId);
+      
+      // If we're deleting the active chat, switch to another chat
+      if (chatId === activeChatId) {
+        if (filteredChats.length > 0) {
+          setActiveChatId(filteredChats[0].id);
+        } else {
+          // If no chats left, create a new one
+          const newChat = {
+            id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: 'Chat 1',
+            messages: [],
+            lastMessage: null
+          };
+          setActiveChatId(newChat.id);
+          return [newChat];
+        }
+      }
+      
+      return filteredChats;
+    });
+  };
+
   const getActiveChat = () => {
     return chats.find(chat => chat.id === activeChatId);
   };
@@ -125,6 +150,7 @@ function App() {
           activeChatId={activeChatId}
           onChatSelect={selectChat}
           onNewChat={createNewChat}
+          onDeleteChat={deleteChat}
         />
         <div className="main-content">
           <header className="app-header">
