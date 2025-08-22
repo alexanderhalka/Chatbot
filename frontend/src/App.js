@@ -8,6 +8,7 @@ function App() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [nextChatNumber, setNextChatNumber] = useState(1);
 
   // Initialize with one chat if no chats exist
   useEffect(() => {
@@ -21,21 +22,22 @@ function App() {
       
       setChats([initialChat]);
       setActiveChatId(initialChat.id);
+      setNextChatNumber(2); // Next chat will be Chat 2
       setIsInitialized(true);
     }
   }, [isInitialized]);
 
   const createNewChat = () => {
-    const newChatNumber = chats.length + 1;
     const newChat = {
       id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      title: `Chat ${newChatNumber}`,
+      title: `Chat ${nextChatNumber}`,
       messages: [],
       lastMessage: null
     };
     
     setChats(prev => [...prev, newChat]);
     setActiveChatId(newChat.id);
+    setNextChatNumber(prev => prev + 1); // Increment for next chat
   };
 
   const selectChat = (chatId) => {
@@ -59,6 +61,7 @@ function App() {
             lastMessage: null
           };
           setActiveChatId(newChat.id);
+          setNextChatNumber(2); // Reset counter for fresh start
           return [newChat];
         }
       }
