@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ChatSidebar.css';
 
 const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteChat, onRenameChat }) => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editValue, setEditValue] = useState('');
+
+  // Handle clicks outside the menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if the click is outside any menu or menu button
+      const isMenuClick = event.target.closest('.chat-menu');
+      const isMenuButtonClick = event.target.closest('.menu-button');
+      
+      if (!isMenuClick && !isMenuButtonClick && openMenuId) {
+        setOpenMenuId(null);
+      }
+    };
+
+    // Add event listener if menu is open
+    if (openMenuId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   const handleMenuClick = (e, chatId) => {
     e.stopPropagation();
