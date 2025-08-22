@@ -93,6 +93,34 @@
   opacity: 0.9;
 }
 
+.rename-form {
+  width: 100%;
+}
+
+.rename-input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: white;
+  color: #333;
+  outline: none;
+  font-family: inherit;
+}
+
+.rename-input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.chat-item.active .rename-input {
+  background: white;
+  color: #333;
+  border-color: #0056b3;
+}
+
 .chat-menu {
   position: relative;
 }

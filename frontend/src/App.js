@@ -70,6 +70,22 @@ function App() {
     });
   };
 
+  const renameChat = (chatId, newTitle) => {
+    // Validate the new title
+    if (!newTitle || newTitle.trim().length === 0) {
+      return; // Don't rename if empty
+    }
+    
+    // Sanitize the title to prevent breaking the app
+    const sanitizedTitle = newTitle.trim().substring(0, 50);
+    
+    setChats(prev => prev.map(chat => 
+      chat.id === chatId 
+        ? { ...chat, title: sanitizedTitle }
+        : chat
+    ));
+  };
+
   const getActiveChat = () => {
     return chats.find(chat => chat.id === activeChatId);
   };
@@ -154,6 +170,7 @@ function App() {
           onChatSelect={selectChat}
           onNewChat={createNewChat}
           onDeleteChat={deleteChat}
+          onRenameChat={renameChat}
         />
         <div className="main-content">
           <header className="app-header">

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import './ChatSidebar.css';
 
-const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteChat }) => {
+const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteChat, onRenameChat }) => {
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [editingChatId, setEditingChatId] = useState(null);
+  const [editValue, setEditValue] = useState('');
 
   const handleMenuClick = (e, chatId) => {
     e.stopPropagation();
@@ -17,9 +19,35 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
 
   const handleRenameChat = (e, chatId) => {
     e.stopPropagation();
-    // TODO: Implement rename functionality
-    console.log('Rename chat:', chatId);
-    setOpenMenuId(null);
+    const chat = chats.find(c => c.id === chatId);
+    if (chat) {
+      setEditingChatId(chatId);
+      setEditValue(chat.title);
+      setOpenMenuId(null);
+    }
+  };
+
+  const handleRenameSubmit = (e) => {
+    e.preventDefault();
+    if (editingChatId && editValue.trim()) {
+      const sanitizedValue = editValue.trim().substring(0, 50); // Limit to 50 characters
+      onRenameChat(editingChatId, sanitizedValue);
+      setEditingChatId(null);
+      setEditValue('');
+    }
+  };
+
+  const handleRenameCancel = () => {
+    setEditingChatId(null);
+    setEditValue('');
+  };
+
+  const handleRenameKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleRenameSubmit(e);
+    } else if (e.key === 'Escape') {
+      handleRenameCancel();
+    }
   };
 
   const handleChatClick = (chatId) => {
@@ -48,35 +76,54 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
             onClick={() => handleChatClick(chat.id)}
           >
             <div className="chat-item-content">
-              <span className="chat-title">{chat.title}</span>
-              <span className="chat-preview">
-                {chat.lastMessage || 'No messages yet'}
-              </span>
-            </div>
-            <div className="chat-menu">
-              <button 
-                className="menu-button"
-                onClick={(e) => handleMenuClick(e, chat.id)}
-              >
-                ⋯
-              </button>
-              {openMenuId === chat.id && (
-                <div className="menu-dropdown">
-                  <button 
-                    className="menu-item"
-                    onClick={(e) => handleRenameChat(e, chat.id)}
-                  >
-                    Rename
-                  </button>
-                  <button 
-                    className="menu-item delete"
-                    onClick={(e) => handleDeleteChat(e, chat.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
+              {editingChatId === chat.id ? (
+                <form onSubmit={handleRenameSubmit} className="rename-form">
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={handleRenameKeyPress}
+                    onBlur={handleRenameCancel}
+                    className="rename-input"
+                    maxLength={50}
+                    autoFocus
+                  />
+                </form>
+              ) : (
+                <>
+                  <span className="chat-title">{chat.title}</span>
+                  <span className="chat-preview">
+                    {chat.lastMessage || 'No messages yet'}
+                  </span>
+                </>
               )}
             </div>
+            {editingChatId !== chat.id && (
+              <div className="chat-menu">
+                <button 
+                  className="menu-button"
+                  onClick={(e) => handleMenuClick(e, chat.id)}
+                >
+                  ⋯
+                </button>
+                {openMenuId === chat.id && (
+                  <div className="menu-dropdown">
+                    <button 
+                      className="menu-item"
+                      onClick={(e) => handleRenameChat(e, chat.id)}
+                    >
+                      Rename
+                    </button>
+                    <button 
+                      className="menu-item delete"
+                      onClick={(e) => handleDeleteChat(e, chat.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
