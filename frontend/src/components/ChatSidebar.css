@@ -7,12 +7,24 @@
   height: 100vh;
   position: relative;
   z-index: 10;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .chat-sidebar {
+  background: #1a1a1a;
+  border-right: 1px solid #404040;
 }
 
 .sidebar-header {
   padding: 1rem;
   border-bottom: 1px solid #e1e5e9;
   background: white;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .sidebar-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
 }
 
 .sidebar-header h2 {
@@ -20,6 +32,11 @@
   font-size: 1.25rem;
   color: #333;
   font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.dark-mode .sidebar-header h2 {
+  color: #ffffff;
 }
 
 .new-chat-btn {
@@ -63,9 +80,19 @@
   overflow: visible;
 }
 
+.dark-mode .chat-item {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
 .chat-item:hover {
   background: #f0f2f5;
   border-color: #e1e5e9;
+}
+
+.dark-mode .chat-item:hover {
+  background: #404040;
+  border-color: #555555;
 }
 
 .chat-item.active {
@@ -124,6 +151,13 @@
   font-family: inherit;
   box-sizing: border-box;
   max-width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .rename-input {
+  background: #2d2d2d;
+  color: #ffffff;
+  border-color: #4a9eff;
 }
 
 .rename-input:focus {
@@ -131,10 +165,21 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+.dark-mode .rename-input:focus {
+  border-color: #66b3ff;
+  box-shadow: 0 0 0 2px rgba(102, 179, 255, 0.25);
+}
+
 .chat-item.active .rename-input {
   background: white;
   color: #333;
   border-color: #0056b3;
+}
+
+.dark-mode .chat-item.active .rename-input {
+  background: #2d2d2d;
+  color: #ffffff;
+  border-color: #66b3ff;
 }
 
 .chat-menu {
@@ -186,6 +231,13 @@
   z-index: 9999;
   min-width: 120px;
   margin-top: 0.25rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .menu-dropdown {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .menu-item {
@@ -198,19 +250,35 @@
   cursor: pointer;
   font-size: 0.875rem;
   color: #333;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.3s ease;
+}
+
+.dark-mode .menu-item {
+  color: #ffffff;
 }
 
 .menu-item:hover {
   background: #f8f9fa;
 }
 
+.dark-mode .menu-item:hover {
+  background: #404040;
+}
+
 .menu-item.delete {
   color: #dc3545;
 }
 
+.dark-mode .menu-item.delete {
+  color: #ff6b6b;
+}
+
 .menu-item.delete:hover {
   background: #fee;
+}
+
+.dark-mode .menu-item.delete:hover {
+  background: #4a2a2a;
 }
 
 /* Scrollbar styling */

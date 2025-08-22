@@ -4,6 +4,8 @@ import ChatInterface from './components/ChatInterface';
 import ChatSidebar from './components/ChatSidebar';
 import UsernameInput from './components/UsernameInput';
 import PersonalityPicker from './components/PersonalityPicker';
+import ThemeToggle from './components/ThemeToggle';
+import { ThemeProvider } from './ThemeContext';
 
 function App() {
   const [chats, setChats] = useState([]);
@@ -393,63 +395,66 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <div className="app-container">
-        <ChatSidebar 
-          chats={chats}
-          activeChatId={activeChatId}
-          onChatSelect={selectChat}
-          onNewChat={createNewChat}
-          onDeleteChat={deleteChat}
-          onRenameChat={renameChat}
-        />
-        <div className="main-content">
-          <header className="app-header">
-            <div className="header-content">
-              <h1>ChatGPT Clone</h1>
-              <div className="header-right">
-                {activeChat && (
-                  <button 
-                    onClick={() => setShowPersonalityPicker(true)}
-                    className="personality-btn"
-                  >
-                    {getPersonalityIcon(activeChat.personality || 'assistant')} 
-                    {getPersonalityName(activeChat.personality || 'assistant')}
-                  </button>
-                )}
-                {userStatus && (
-                  <div className="user-status">
-                    <span className="status-text">
-                      Messages: {userStatus.daily_count}/{userStatus.daily_limit}
-                    </span>
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{width: `${(userStatus.daily_count / userStatus.daily_limit) * 100}%`}}
-                      ></div>
+    <ThemeProvider>
+      <div className="App">
+        <div className="app-container">
+          <ChatSidebar 
+            chats={chats}
+            activeChatId={activeChatId}
+            onChatSelect={selectChat}
+            onNewChat={createNewChat}
+            onDeleteChat={deleteChat}
+            onRenameChat={renameChat}
+          />
+          <div className="main-content">
+            <header className="app-header">
+              <div className="header-content">
+                <h1>ChatGPT Clone</h1>
+                <div className="header-right">
+                  {activeChat && (
+                    <button 
+                      onClick={() => setShowPersonalityPicker(true)}
+                      className="personality-btn"
+                    >
+                      {getPersonalityIcon(activeChat.personality || 'assistant')} 
+                      {getPersonalityName(activeChat.personality || 'assistant')}
+                    </button>
+                  )}
+                  {userStatus && (
+                    <div className="user-status">
+                      <span className="status-text">
+                        Messages: {userStatus.daily_count}/{userStatus.daily_limit}
+                      </span>
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill" 
+                          style={{width: `${(userStatus.daily_count / userStatus.daily_limit) * 100}%`}}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <button onClick={handleLogout} className="logout-btn">
-                  Logout
-                </button>
+                  )}
+                  <ThemeToggle />
+                  <button onClick={handleLogout} className="logout-btn">
+                    Logout
+                  </button>
+                </div>
               </div>
-            </div>
-          </header>
-          <main className="chat-main">
-            {activeChat && (
-              <ChatInterface 
-                messages={activeChat.messages}
-                setMessages={(messages) => updateChatMessages(activeChatId, messages)}
-                sessionId={activeChatId}
-                onSendMessage={sendMessage}
-                isLoading={isLoading}
-              />
-            )}
-          </main>
+            </header>
+            <main className="chat-main">
+              {activeChat && (
+                <ChatInterface 
+                  messages={activeChat.messages}
+                  setMessages={(messages) => updateChatMessages(activeChatId, messages)}
+                  sessionId={activeChatId}
+                  onSendMessage={sendMessage}
+                  isLoading={isLoading}
+                />
+              )}
+            </main>
+          </div>
         </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }
 

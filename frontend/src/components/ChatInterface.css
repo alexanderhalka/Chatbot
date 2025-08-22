@@ -3,6 +3,11 @@
   flex-direction: column;
   height: 100%;
   background: #f7f7f8;
+  transition: background-color 0.3s ease;
+}
+
+.dark-mode .chat-container {
+  background: #1a1a1a;
 }
 
 .messages-container {
@@ -23,6 +28,13 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin: auto;
   max-width: 400px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark-mode .welcome-message {
+  background: #2d2d2d;
+  color: #cccccc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .welcome-message h2 {
@@ -79,6 +91,14 @@
   border: 1px solid #e1e5e9;
   border-bottom-left-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .message.ai .message-content {
+  background: #2d2d2d;
+  color: #ffffff;
+  border: 1px solid #404040;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .message.error .message-content {
@@ -172,6 +192,12 @@
   padding: 1rem;
   background: white;
   border-top: 1px solid #e1e5e9;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .input-container {
+  background: #1a1a1a;
+  border-top: 1px solid #404040;
 }
 
 .input-wrapper {
@@ -182,7 +208,12 @@
   border: 2px solid #e1e5e9;
   border-radius: 24px;
   padding: 0.5rem;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.dark-mode .input-wrapper {
+  background: #2d2d2d;
+  border: 2px solid #404040;
 }
 
 .input-wrapper:focus-within {
@@ -202,10 +233,20 @@
   background: transparent;
   min-height: 20px;
   max-height: 120px;
+  color: #333;
+  transition: color 0.3s ease;
+}
+
+.dark-mode .input-wrapper textarea {
+  color: #ffffff;
 }
 
 .input-wrapper textarea::placeholder {
   color: #999;
+}
+
+.dark-mode .input-wrapper textarea::placeholder {
+  color: #666;
 }
 
 .send-button {
