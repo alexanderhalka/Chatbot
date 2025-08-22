@@ -3,6 +3,7 @@ import './App.css';
 import ChatInterface from './components/ChatInterface';
 import ChatSidebar from './components/ChatSidebar';
 import UsernameInput from './components/UsernameInput';
+import PersonalityPicker from './components/PersonalityPicker';
 
 function App() {
   const [chats, setChats] = useState([]);
@@ -13,6 +14,7 @@ function App() {
   const [username, setUsername] = useState(null);
   const [userStatus, setUserStatus] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showPersonalityPicker, setShowPersonalityPicker] = useState(false);
 
   // Load user's chats from localStorage
   const loadUserChats = (username) => {
@@ -31,7 +33,8 @@ function App() {
         id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         title: 'Chat 1',
         messages: [],
-        lastMessage: null
+        lastMessage: null,
+        personality: 'assistant' // Default personality
       };
       
       setChats([initialChat]);
@@ -96,6 +99,7 @@ function App() {
     setNextChatNumber(1);
     setIsInitialized(false);
     setShowLogin(true);
+    setShowPersonalityPicker(false);
   };
 
   const handleUsernameSet = (newUsername) => {
@@ -113,7 +117,8 @@ function App() {
       id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       title: `Chat ${nextChatNumber}`,
       messages: [],
-      lastMessage: null
+      lastMessage: null,
+      personality: 'assistant' // Default personality
     };
     
     const updatedChats = [...chats, newChat];
@@ -147,7 +152,8 @@ function App() {
           id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           title: 'Chat 1',
           messages: [],
-          lastMessage: null
+          lastMessage: null,
+          personality: 'assistant'
         };
         filteredChats.push(newChat);
         newActiveChatId = newChat.id;
@@ -182,6 +188,47 @@ function App() {
     
     // Save to localStorage
     saveUserChats(username, updatedChats, activeChatId, nextChatNumber);
+  };
+
+  const updateChatPersonality = (chatId, personality) => {
+    const updatedChats = chats.map(chat => 
+      chat.id === chatId 
+        ? { ...chat, personality }
+        : chat
+    );
+    
+    setChats(updatedChats);
+    
+    // Save to localStorage
+    saveUserChats(username, updatedChats, activeChatId, nextChatNumber);
+    
+    // Update personality on backend
+    updatePersonalityOnBackend(chatId, personality);
+  };
+
+  const updatePersonalityOnBackend = async (chatId, personality) => {
+    try {
+      const response = await fetch('/update-personality', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user': `test-${username}`
+        },
+        body: JSON.stringify({
+          session_id: chatId,
+          personality: personality
+        })
+      });
+      
+      const data = await response.json();
+      if (data.status === 'success') {
+        console.log(`Personality updated to ${personality}`);
+      } else {
+        console.error('Failed to update personality:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating personality:', error);
+    }
   };
 
   const getActiveChat = () => {
@@ -228,7 +275,8 @@ function App() {
         },
         body: JSON.stringify({ 
           message: message,
-          session_id: activeChatId
+          session_id: activeChatId,
+          personality: activeChat.personality || 'assistant'
         }),
       });
 
@@ -313,6 +361,37 @@ function App() {
     );
   }
 
+  // Show personality picker if requested
+  if (showPersonalityPicker) {
+    return (
+      <div className="App">
+        <div className="app-container">
+          <div className="main-content">
+            <header className="app-header">
+              <div className="header-content">
+                <h1>Choose Personality</h1>
+                <button onClick={() => setShowPersonalityPicker(false)} className="back-btn">
+                  Back to Chat
+                </button>
+              </div>
+            </header>
+            <main className="chat-main">
+              <PersonalityPicker 
+                selectedPersonality={activeChat?.personality || 'assistant'}
+                onPersonalityChange={(personality) => {
+                  if (activeChat) {
+                    updateChatPersonality(activeChat.id, personality);
+                  }
+                  setShowPersonalityPicker(false);
+                }}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       <div className="app-container">
@@ -329,6 +408,15 @@ function App() {
             <div className="header-content">
               <h1>ChatGPT Clone</h1>
               <div className="header-right">
+                {activeChat && (
+                  <button 
+                    onClick={() => setShowPersonalityPicker(true)}
+                    className="personality-btn"
+                  >
+                    {getPersonalityIcon(activeChat.personality || 'assistant')} 
+                    {getPersonalityName(activeChat.personality || 'assistant')}
+                  </button>
+                )}
                 {userStatus && (
                   <div className="user-status">
                     <span className="status-text">
@@ -364,5 +452,31 @@ function App() {
     </div>
   );
 }
+
+const getPersonalityIcon = (personalityKey) => {
+  const icons = {
+    assistant: '🤖',
+    coach: '🏋️',
+    therapist: '🧠',
+    study_buddy: '📚',
+    bestie: '✨',
+    best_friend: '👨‍💻',
+    romantic_partner: '💕'
+  };
+  return icons[personalityKey] || '🤖';
+};
+
+const getPersonalityName = (personalityKey) => {
+  const names = {
+    assistant: 'Assistant',
+    coach: 'Coach',
+    therapist: 'Therapist',
+    study_buddy: 'Study Buddy',
+    bestie: 'Bestie',
+    best_friend: 'Best Friend (chill)',
+    romantic_partner: 'Partner'
+  };
+  return names[personalityKey] || 'AI';
+};
 
 export default App;

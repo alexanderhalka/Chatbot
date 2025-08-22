@@ -1,0 +1,157 @@
+.personality-picker {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 0 auto;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.picker-header {
+  text-align: center;
+  padding: 2rem 2rem 1rem 2rem;
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.picker-header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.picker-header p {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.personality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 2rem;
+  padding-top: 1rem;
+}
+
+.personality-card {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.personality-card:hover {
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.personality-card.selected {
+  border-color: #007bff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.personality-card.selected .personality-info h4,
+.personality-card.selected .personality-info p {
+  color: white;
+}
+
+.personality-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.personality-card.selected .personality-icon {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+}
+
+.personality-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.personality-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.personality-info p {
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.selected-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #28a745;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.loading {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  .personality-picker {
+    margin: 1rem;
+    max-height: 85vh;
+  }
+  
+  .picker-header {
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+  }
+  
+  .personality-grid {
+    padding: 1.5rem;
+    padding-top: 1rem;
+    grid-template-columns: 1fr;
+  }
+  
+  .personality-card {
+    padding: 1rem;
+  }
+  
+  .personality-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+  }
+}
