@@ -6,7 +6,8 @@ const ChatInterface = ({
   setMessages, 
   sessionId, 
   onSendMessage, 
-  isLoading 
+  isLoading,
+  userStatus 
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef(null);
@@ -38,9 +39,10 @@ const ChatInterface = ({
     }
   };
 
-  const isLimitReached = messages.some(msg => 
-    msg.sender === 'error' && msg.text.includes('Daily limit reached')
-  );
+  const isLimitReached = userStatus?.limit_enabled === false ? false : 
+    messages.some(msg => 
+      msg.sender === 'error' && msg.text.includes('Daily limit reached')
+    );
 
   return (
     <div className="chat-container">

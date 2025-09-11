@@ -420,7 +420,7 @@ function App() {
                       {getPersonalityName(activeChat.personality || 'assistant')}
                     </button>
                   )}
-                  {userStatus && (
+                  {userStatus && userStatus.limit_enabled && (
                     <div className="user-status">
                       <span className="status-text">
                         Messages: {userStatus.daily_count}/{userStatus.daily_limit}
@@ -448,6 +448,7 @@ function App() {
                   sessionId={activeChatId}
                   onSendMessage={sendMessage}
                   isLoading={isLoading}
+                  userStatus={userStatus}
                 />
               )}
             </main>

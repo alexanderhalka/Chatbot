@@ -54,7 +54,9 @@ PERSONALITIES = {
 }
 
 # Constants
-FREE_DAILY_MSG_LIMIT = 10
+# Message limit configuration - easily toggle for testing/release
+ENABLE_MESSAGE_LIMIT = False  # Set to False to disable message limits completely
+FREE_DAILY_MSG_LIMIT = 10    # Daily message limit per user (only used when ENABLE_MESSAGE_LIMIT = True)
 
 # In-memory storage for conversation history and user limits
 # In production, you'd want to use a database
@@ -70,6 +72,9 @@ def get_user_id_from_header():
 
 def check_daily_limit(user_id):
     """Check if user has reached daily message limit"""
+    if not ENABLE_MESSAGE_LIMIT:
+        return False  # Message limits disabled
+    
     today = date.today().isoformat()
     
     if user_id not in user_daily_counts:
@@ -220,6 +225,16 @@ def chat():
 def user_status():
     """Get user's current status and daily count"""
     user_id = get_user_id_from_header()
+    
+    if not ENABLE_MESSAGE_LIMIT:
+        return jsonify({
+            'user_id': user_id,
+            'daily_count': 0,
+            'daily_limit': 0,
+            'remaining': -1,  # -1 indicates unlimited
+            'limit_enabled': False
+        })
+    
     today = date.today().isoformat()
     
     if user_id not in user_daily_counts:
@@ -232,7 +247,8 @@ def user_status():
         'user_id': user_id,
         'daily_count': user_daily_counts[user_id][today],
         'daily_limit': FREE_DAILY_MSG_LIMIT,
-        'remaining': FREE_DAILY_MSG_LIMIT - user_daily_counts[user_id][today]
+        'remaining': FREE_DAILY_MSG_LIMIT - user_daily_counts[user_id][today],
+        'limit_enabled': True
     })
 
 @app.route('/clear-memory', methods=['POST'])
