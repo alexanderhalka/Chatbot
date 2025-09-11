@@ -122,7 +122,7 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
               )}
             </div>
             {editingChatId !== chat.id && (
-              <div className="chat-menu">
+              <div className={`chat-menu ${openMenuId === chat.id ? 'open' : ''}`}>
                 <button 
                   className="menu-button"
                   onClick={(e) => handleMenuClick(e, chat.id)}

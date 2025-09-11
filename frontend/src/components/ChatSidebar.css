@@ -101,6 +101,12 @@
   border-color: #007bff;
 }
 
+.dark-mode .chat-item.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
 .chat-item-content {
   display: flex;
   flex-direction: column;
@@ -187,6 +193,13 @@
   flex-shrink: 0;
   margin-left: 0.5rem;
   z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.chat-item:hover .chat-menu,
+.chat-menu.open {
+  opacity: 1;
 }
 
 .menu-button {
@@ -196,7 +209,7 @@
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
-  color: #666;
+  color: #000;
   transition: all 0.2s ease;
   flex-shrink: 0;
   width: 24px;
@@ -208,7 +221,7 @@
 
 .menu-button:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #333;
+  color: #000;
 }
 
 .chat-item.active .menu-button {
@@ -218,6 +231,16 @@
 .chat-item.active .menu-button:hover {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+}
+
+/* Dark mode menu button styles */
+.dark-mode .menu-button {
+  color: #fff;
+}
+
+.dark-mode .menu-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .menu-dropdown {

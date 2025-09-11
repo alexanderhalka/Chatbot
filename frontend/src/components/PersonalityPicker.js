@@ -351,7 +351,7 @@ const PersonalityPicker = ({ selectedPersonality, onPersonalityChange, onPersona
                   </div>
                   
                   {/* 3-dot menu for custom personalities */}
-                  <div className="personality-menu">
+                  <div className={`personality-menu ${openMenuId === key ? 'open' : ''}`}>
                     <button 
                       className="menu-btn"
                       onClick={(e) => handleMenuClick(e, key)}

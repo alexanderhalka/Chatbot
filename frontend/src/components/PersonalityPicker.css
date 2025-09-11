@@ -145,13 +145,20 @@
   top: 1rem;
   right: 1rem;
   z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.personality-card:hover .personality-menu,
+.personality-menu.open {
+  opacity: 1;
 }
 
 .menu-btn {
   background: none;
   border: none;
   font-size: 1.2rem;
-  color: #666;
+  color: #000;
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -165,7 +172,7 @@
 
 .menu-btn:hover {
   background: rgba(0, 0, 0, 0.1);
-  color: #333;
+  color: #000;
 }
 
 .menu-dropdown {
@@ -544,12 +551,12 @@
 }
 
 .dark-mode .menu-btn {
-  color: #a0aec0;
+  color: #fff;
 }
 
 .dark-mode .menu-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
+  color: #fff;
 }
 
 .dark-mode .menu-dropdown {
