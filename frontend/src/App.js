@@ -17,6 +17,18 @@ function App() {
   const [userStatus, setUserStatus] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showPersonalityPicker, setShowPersonalityPicker] = useState(false);
+  const [personalities, setPersonalities] = useState({});
+
+  // Fetch personalities from backend
+  const fetchPersonalities = async () => {
+    try {
+      const response = await fetch('/personalities');
+      const data = await response.json();
+      setPersonalities(data.personalities);
+    } catch (error) {
+      console.error('Error fetching personalities:', error);
+    }
+  };
 
   // Load user's chats from localStorage
   const loadUserChats = (username) => {
@@ -68,6 +80,7 @@ function App() {
     } else {
       setShowLogin(true);
     }
+    fetchPersonalities();
   }, []);
 
   // Load user's chats when username changes
@@ -386,6 +399,7 @@ function App() {
                   }
                   setShowPersonalityPicker(false);
                 }}
+                onPersonalityCreated={fetchPersonalities}
               />
             </main>
           </div>
@@ -416,8 +430,8 @@ function App() {
                       onClick={() => setShowPersonalityPicker(true)}
                       className="personality-btn"
                     >
-                      {getPersonalityIcon(activeChat.personality || 'assistant')} 
-                      {getPersonalityName(activeChat.personality || 'assistant')}
+                      {getPersonalityIcon(activeChat.personality || 'assistant', personalities)} 
+                      {getPersonalityName(activeChat.personality || 'assistant', personalities)}
                     </button>
                   )}
                   {userStatus && userStatus.limit_enabled && (
@@ -459,7 +473,13 @@ function App() {
   );
 }
 
-const getPersonalityIcon = (personalityKey) => {
+const getPersonalityIcon = (personalityKey, personalities) => {
+  // Check if it's a custom personality first
+  if (personalities[personalityKey] && personalities[personalityKey].icon) {
+    return personalities[personalityKey].icon;
+  }
+  
+  // Fallback to default icons
   const icons = {
     assistant: '🤖',
     coach: '🏋️',
@@ -472,7 +492,13 @@ const getPersonalityIcon = (personalityKey) => {
   return icons[personalityKey] || '🤖';
 };
 
-const getPersonalityName = (personalityKey) => {
+const getPersonalityName = (personalityKey, personalities) => {
+  // Check if it's a custom personality first
+  if (personalities[personalityKey] && personalities[personalityKey].name) {
+    return personalities[personalityKey].name;
+  }
+  
+  // Fallback to default names
   const names = {
     assistant: 'Assistant',
     coach: 'Coach',

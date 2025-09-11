@@ -14,6 +14,9 @@ CORS(app)
 # Configure OpenAI
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+# In-memory storage for custom personalities (in production, use a database)
+custom_personalities = {}
+
 # Personality system prompts
 PERSONALITIES = {
     "assistant": {
@@ -105,12 +108,13 @@ def update_personality():
         session_id = data.get('session_id', 'default')
         personality = data.get('personality', 'assistant')
         
-        # Validate personality
-        if personality not in PERSONALITIES:
+        # Validate personality (check both default and custom personalities)
+        all_personalities = {**PERSONALITIES, **custom_personalities}
+        if personality not in all_personalities:
             return jsonify({'error': 'Invalid personality'}), 400
         
         # Get system prompt for new personality
-        system_prompt = PERSONALITIES[personality]['system_prompt']
+        system_prompt = all_personalities[personality]['system_prompt']
         
         # Update the conversation history with new system prompt
         if session_id in conversation_history:
@@ -145,9 +149,96 @@ def update_personality():
 @app.route('/personalities', methods=['GET'])
 def get_personalities():
     """Get available personalities"""
+    # Combine default and custom personalities
+    all_personalities = {**PERSONALITIES, **custom_personalities}
     return jsonify({
-        'personalities': PERSONALITIES
+        'personalities': all_personalities
     })
+
+@app.route('/personalities', methods=['POST'])
+def create_personality():
+    """Create a new custom personality"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'description', 'systemPrompt', 'icon']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Generate unique key for custom personality
+        personality_key = f"custom_{len(custom_personalities) + 1}_{int(datetime.now().timestamp())}"
+        
+        # Store custom personality
+        custom_personalities[personality_key] = {
+            'name': data['name'],
+            'description': data['description'],
+            'system_prompt': data['systemPrompt'],
+            'icon': data['icon'],
+            'isCustom': True
+        }
+        
+        return jsonify({
+            'success': True,
+            'personality_key': personality_key,
+            'personality': custom_personalities[personality_key]
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/personalities/<personality_key>', methods=['PUT'])
+def update_custom_personality(personality_key):
+    """Update an existing custom personality"""
+    try:
+        # Check if personality exists and is custom
+        if personality_key not in custom_personalities:
+            return jsonify({'error': 'Personality not found or not editable'}), 404
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'description', 'systemPrompt', 'icon']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Update custom personality
+        custom_personalities[personality_key] = {
+            'name': data['name'],
+            'description': data['description'],
+            'system_prompt': data['systemPrompt'],
+            'icon': data['icon'],
+            'isCustom': True
+        }
+        
+        return jsonify({
+            'success': True,
+            'personality': custom_personalities[personality_key]
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/personalities/<personality_key>', methods=['DELETE'])
+def delete_custom_personality(personality_key):
+    """Delete a custom personality"""
+    try:
+        # Check if personality exists and is custom
+        if personality_key not in custom_personalities:
+            return jsonify({'error': 'Personality not found or not deletable'}), 404
+        
+        # Remove from custom personalities
+        deleted_personality = custom_personalities.pop(personality_key, None)
+        
+        if deleted_personality:
+            return jsonify({'success': True, 'message': 'Personality deleted successfully'})
+        else:
+            return jsonify({'error': 'Personality not found'}), 404
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -171,12 +262,13 @@ def chat():
         if not user_message:
             return jsonify({'error': 'No message provided'}), 400
         
-        # Validate personality
-        if personality not in PERSONALITIES:
+        # Validate personality (check both default and custom personalities)
+        all_personalities = {**PERSONALITIES, **custom_personalities}
+        if personality not in all_personalities:
             personality = 'assistant'  # Fallback to assistant
         
         # Get system prompt for personality
-        system_prompt = PERSONALITIES[personality]['system_prompt']
+        system_prompt = all_personalities[personality]['system_prompt']
         
         # Increment daily count
         increment_daily_count(user_id)
