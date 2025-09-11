@@ -36,7 +36,11 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
 
   const handleDeleteChat = (e, chatId) => {
     e.stopPropagation();
-    onDeleteChat(chatId);
+    
+    if (window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+      onDeleteChat(chatId);
+    }
+    
     setOpenMenuId(null);
   };
 
