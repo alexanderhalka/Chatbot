@@ -79,6 +79,11 @@
   line-height: 1.5;
 }
 
+/* Edit mode: keep same wide horizontal shape as normal message */
+.message-content:has(.message-edit-container) {
+  min-width: min(70%, 400px);
+}
+
 .message.user .message-content {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -132,152 +137,230 @@
   margin-top: 0.5rem;
 }
 
+.message.user .message-footer {
+  justify-content: flex-end;
+}
+
+/* Group three dots + timestamp together on the right, dots just left of time */
+.message-footer-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .message-timestamp {
   font-size: 0.75rem;
   opacity: 0.7;
   flex-shrink: 0;
 }
 
-.message.user .message-footer {
-  flex-direction: row-reverse;
+/* Three-dot menu (like convo sidebar): always visible, highlight on hover, click opens Edit/Delete */
+.message-menu {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 20;
 }
 
-.message-actions {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-}
-
-.message-action-btn {
-  background: rgba(255, 255, 255, 0.2);
+.message-menu-button {
+  background: none;
   border: none;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  font-size: 1.2rem;
   cursor: pointer;
-  font-size: 0.875rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.9);
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
 }
 
-.message.user .message-action-btn {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.message.ai .message-action-btn {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.dark-mode .message.ai .message-action-btn {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.message-action-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: scale(1.1);
-}
-
-.message.user .message-action-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.message.ai .message-action-btn:hover {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-.dark-mode .message.ai .message-action-btn:hover {
+.message-menu-button:hover {
   background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
+.message-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 120px;
+  margin-top: 0.25rem;
+}
+
+.dark-mode .message-menu-dropdown {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.message-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.dark-mode .message-menu-item {
+  color: #ffffff;
+}
+
+.message-menu-item:hover {
+  background: #f8f9fa;
+}
+
+.dark-mode .message-menu-item:hover {
+  background: #404040;
+}
+
+.message-menu-item.delete {
+  color: #dc3545;
+}
+
+.dark-mode .message-menu-item.delete {
+  color: #ff6b6b;
+}
+
+.message-menu-item.delete:hover {
+  background: #fee;
+}
+
+.dark-mode .message-menu-item.delete:hover {
+  background: #4a2a2a;
+}
+
+/* Edit mode: same box as normal message — container fills locked size, textarea scrolls inside */
 .message-edit-container {
   width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
+/* Fills space above footer, scrolls if content is long — no visible scrollbar, scroll with wheel */
 .message-edit-input {
   width: 100%;
-  min-height: 60px;
-  padding: 0.75rem;
-  border: 2px solid #667eea;
-  border-radius: 8px;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  padding: 0;
+  border: none;
+  border-radius: 0;
   font-family: inherit;
   font-size: 1rem;
   line-height: 1.5;
-  resize: vertical;
-  background: white;
-  color: #333;
+  white-space: pre-wrap;
+  resize: none;
+  background: transparent;
+  color: inherit;
   outline: none;
-  margin-bottom: 0.5rem;
-  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  margin: 0 0 0.5rem 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+  scrollbar-width: none;
+}
+.message-edit-input::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
-.dark-mode .message-edit-input {
-  background: #2d2d2d;
-  color: #ffffff;
-  border-color: #667eea;
+.message-edit-input::placeholder {
+  opacity: 0.7;
 }
 
 .message.user .message-edit-input {
-  background: rgba(255, 255, 255, 0.95);
+  color: white;
+}
+
+.message.user .message-edit-input::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.message.ai .message-edit-input {
   color: #333;
 }
 
-.dark-mode .message.user .message-edit-input {
-  background: rgba(45, 45, 45, 0.95);
+.dark-mode .message.ai .message-edit-input {
   color: #ffffff;
 }
 
+/* Footer row: same as .message-footer — one row, same margin-top */
 .message-edit-actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+  margin-top: 0.5rem;
   justify-content: flex-end;
 }
 
 .message.user .message-edit-actions {
+  flex-direction: row-reverse;
   justify-content: flex-start;
 }
 
+/* Buttons sized like .message-action-btn so the row matches normal message height */
 .message-edit-save,
 .message-edit-cancel {
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.75rem;
   border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .message-edit-save {
-  background: #667eea;
+  background: rgba(255, 255, 255, 0.25);
   color: white;
 }
 
+.message.user .message-edit-save {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .message-edit-save:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .message-edit-cancel {
-  background: #e1e5e9;
-  color: #333;
-}
-
-.dark-mode .message-edit-cancel {
-  background: #404040;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .message-edit-cancel:hover {
-  background: #c8ced4;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.dark-mode .message-edit-cancel:hover {
-  background: #505050;
+.dark-mode .message.ai .message-edit-save,
+.dark-mode .message.ai .message-edit-cancel {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.dark-mode .message.ai .message-edit-save:hover,
+.dark-mode .message.ai .message-edit-cancel:hover {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .loading-indicator {

@@ -373,7 +373,7 @@ function App() {
     return count + 1;
   };
 
-  // Edit a message
+  // Edit a message (truncates after it, then backend generates a new AI response)
   const editMessage = async (messageIndex, newContent) => {
     if (!activeChatId || !username) return false;
     
@@ -382,14 +382,21 @@ function App() {
     
     const message = activeChat.messages[messageIndex];
     
-    // Can only edit user and ai messages (not error messages)
-    if (message.sender === 'error' || message.sender === 'system') {
-      return false;
-    }
+    if (message.sender !== 'user') return false;
     
     const backendIndex = getBackendIndex(messageIndex, activeChat.messages);
-    const role = message.sender === 'user' ? 'user' : 'assistant';
+    const previousMessages = activeChat.messages;
     
+    // Optimistic update: show edited message and truncate immediately so the edit box is gone and message looks normal while we wait for the AI
+    const updatedMessages = [...activeChat.messages];
+    updatedMessages[messageIndex] = {
+      ...updatedMessages[messageIndex],
+      text: newContent
+    };
+    const truncatedMessages = updatedMessages.slice(0, messageIndex + 1);
+    updateChatMessages(activeChatId, truncatedMessages);
+    
+    setIsLoading(true);
     try {
       const response = await fetch('/message/edit', {
         method: 'PUT',
@@ -401,7 +408,7 @@ function App() {
           session_id: activeChatId,
           message_index: backendIndex,
           new_content: newContent,
-          role: role
+          role: 'user'
         })
       });
 
@@ -411,23 +418,37 @@ function App() {
         throw new Error(data.error);
       }
       
-      // Update the message in frontend and remove all messages after it
-      const updatedMessages = [...activeChat.messages];
-      updatedMessages[messageIndex] = {
-        ...updatedMessages[messageIndex],
-        text: newContent
+      // Same as sending a message: ask /chat for a reply (regenerate_only = no new user message)
+      const chatRes = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user': `test-${username}`
+        },
+        body: JSON.stringify({
+          session_id: activeChatId,
+          personality: activeChat.personality || 'assistant',
+          regenerate_only: true
+        })
+      });
+      const chatData = await chatRes.json();
+      if (chatData.error) throw new Error(chatData.error);
+      
+      const aiMessage = {
+        id: Date.now() + 1,
+        text: chatData.response,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
       };
-      
-      // Remove all messages after the edited one (they depend on the edited context)
-      // Also remove error messages that come after
-      const truncatedMessages = updatedMessages.slice(0, messageIndex + 1);
-      
-      updateChatMessages(activeChatId, truncatedMessages);
+      updateChatMessages(activeChatId, [...truncatedMessages, aiMessage]);
       return true;
     } catch (error) {
       console.error('Error editing message:', error);
       alert(`Failed to edit message: ${error.message}`);
+      updateChatMessages(activeChatId, previousMessages);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 

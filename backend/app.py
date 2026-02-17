@@ -15,6 +15,29 @@ CORS(app)
 OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434/api/chat')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')  # Default model, can be changed
 
+
+def _generate_ollama_response(messages):
+    """Call Ollama with the given messages (list of {role, content}). Returns the assistant reply text.
+    Raises requests exceptions or ValueError on empty response."""
+    ollama_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
+    ollama_request = {
+        "model": OLLAMA_MODEL,
+        "messages": ollama_messages,
+        "stream": False,
+        "options": {
+            "temperature": 0.5,
+            "top_p": 1.0,
+            "num_predict": 600
+        }
+    }
+    ollama_resp = requests.post(OLLAMA_API_URL, json=ollama_request, timeout=60)
+    ollama_resp.raise_for_status()
+    ollama_data = ollama_resp.json()
+    ai = ollama_data.get('message', {}).get('content', '')
+    if not ai:
+        raise ValueError("Empty response from Ollama")
+    return ai
+
 # In-memory storage for custom personalities (in production, use a database)
 custom_personalities = {}
 
@@ -258,74 +281,53 @@ def chat():
         data = request.get_json()
         user_message = data.get('message', '')
         session_id = data.get('session_id', 'default')
-        personality = data.get('personality', 'assistant')  # Default to assistant
+        personality = data.get('personality', 'assistant')
+        regenerate_only = data.get('regenerate_only', False)  # After edit: just get AI reply for current conversation
         
-        if not user_message:
+        if not regenerate_only and not user_message:
             return jsonify({'error': 'No message provided'}), 400
         
-        # Validate personality (check both default and custom personalities)
         all_personalities = {**PERSONALITIES, **custom_personalities}
         if personality not in all_personalities:
-            personality = 'assistant'  # Fallback to assistant
-        
-        # Get system prompt for personality
+            personality = 'assistant'
         system_prompt = all_personalities[personality]['system_prompt']
         
-        # Increment daily count
-        increment_daily_count(user_id)
+        if not regenerate_only:
+            increment_daily_count(user_id)
         
         if session_id not in conversation_history:
-            conversation_history[session_id] = [{
-                "role": "system",
-                "content": system_prompt
-            }]
-
-        conversation_history[session_id].append({"role": "user", "content": user_message})
-
-        # Prepare messages for Ollama
-        # Ollama supports system, user, and assistant roles
-        # We'll pass all messages including the system prompt
-        ollama_messages = [
-            {"role": m["role"], "content": m["content"]}
-            for m in conversation_history[session_id]
-        ]
+            conversation_history[session_id] = [{"role": "system", "content": system_prompt}]
         
-        # Ollama API call
+        if not regenerate_only:
+            conversation_history[session_id].append({"role": "user", "content": user_message})
+        else:
+            # Conversation must end with a user message (e.g. after edit)
+            if not conversation_history[session_id] or conversation_history[session_id][-1]["role"] != "user":
+                return jsonify({'error': 'Conversation must end with a user message to regenerate'}), 400
+
         try:
-            ollama_request = {
-                "model": OLLAMA_MODEL,
-                "messages": ollama_messages,
-                "stream": False,
-                "options": {
-                    "temperature": 0.5,   # Lower = follows instructions better (was 0.8)
-                    "top_p": 1.0,
-                    "num_predict": 600
-                }
-            }
-            
-            ollama_resp = requests.post(OLLAMA_API_URL, json=ollama_request, timeout=60)
-            ollama_resp.raise_for_status()
-            ollama_data = ollama_resp.json()
-            
-            # Extract response from Ollama format
-            ai = ollama_data.get('message', {}).get('content', '')
-            
-            if not ai:
-                raise ValueError("Empty response from Ollama")
-                
+            ai = _generate_ollama_response(conversation_history[session_id])
         except requests.exceptions.ConnectionError:
+            if not regenerate_only:
+                conversation_history[session_id].pop()
             return jsonify({
                 'error': f'Cannot connect to Ollama at {OLLAMA_API_URL}. Make sure Ollama is running (ollama serve) and the URL is correct. Install from https://ollama.ai'
             }), 503
         except requests.exceptions.Timeout:
+            if not regenerate_only:
+                conversation_history[session_id].pop()
             return jsonify({
                 'error': 'Ollama request timed out. The model may be taking too long to respond.'
             }), 504
         except requests.exceptions.HTTPError as e:
+            if not regenerate_only:
+                conversation_history[session_id].pop()
             return jsonify({
                 'error': f'Ollama API error: {str(e)}. Make sure the model "{OLLAMA_MODEL}" is installed. Run: ollama pull {OLLAMA_MODEL}'
             }), 502
         except Exception as e:
+            if not regenerate_only:
+                conversation_history[session_id].pop()
             return jsonify({
                 'error': f'Error calling Ollama: {str(e)}'
             }), 500
@@ -404,18 +406,15 @@ def edit_message():
         if message_index is None or message_index < 1 or message_index >= len(messages):
             return jsonify({'error': 'Invalid message index'}), 400
         
-        # Only allow editing user messages or assistant messages
-        if messages[message_index]['role'] not in ['user', 'assistant']:
-            return jsonify({'error': 'Cannot edit system messages'}), 400
+        # Only allow editing the user's own messages (not AI messages)
+        if messages[message_index]['role'] != 'user':
+            return jsonify({'error': 'You can only edit your own messages'}), 403
         
-        # Verify role matches
         if role and messages[message_index]['role'] != role:
             return jsonify({'error': 'Role mismatch'}), 400
         
-        # Update the message
+        # Update the message and truncate; client will call /chat with regenerate_only to get a new reply
         messages[message_index]['content'] = new_content
-        
-        # Delete all messages after this one (they depend on the edited context)
         messages[:] = messages[:message_index + 1]
         
         return jsonify({
@@ -444,6 +443,10 @@ def delete_message():
         # Cannot delete system prompt (index 0) or if index is invalid
         if message_index is None or message_index < 1 or message_index >= len(messages):
             return jsonify({'error': 'Invalid message index'}), 400
+        
+        # Only allow deleting the user's own messages (not AI messages)
+        if messages[message_index]['role'] != 'user':
+            return jsonify({'error': 'You can only delete your own messages'}), 403
         
         # Get the message before deletion (for frontend reference)
         deleted_message = messages[message_index]

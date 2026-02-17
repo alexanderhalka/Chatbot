@@ -12,12 +12,19 @@ const ChatInterface = ({
   onDeleteMessage
 }) => {
   const [inputMessage, setInputMessage] = useState('');
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editText, setEditText] = useState('');
-  const [hoveredIndex, setHoveredIndex] = useState(null);
+  // Edit state per chat: { [sessionId]: { editingIndex, editText } } so switching chats preserves in-progress edits
+  const [editStateBySession, setEditStateBySession] = useState({});
+  const [openMessageMenuIndex, setOpenMessageMenuIndex] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const editTextareaRef = useRef(null);
+  const messageRowRefs = useRef({});
+
+  const currentEdit = editStateBySession[sessionId];
+  const editingIndex = currentEdit?.editingIndex ?? null;
+  const editText = currentEdit?.editText ?? '';
+  const captureWidth = currentEdit?.captureWidth;
+  const captureHeight = currentEdit?.captureHeight;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,6 +33,21 @@ const ChatInterface = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Close message menu when clicking outside (same as convo sidebar)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const isMessageMenu = e.target.closest('.message-menu');
+      const isMessageMenuButton = e.target.closest('.message-menu-button');
+      if (!isMessageMenu && !isMessageMenuButton && openMessageMenuIndex !== null) {
+        setOpenMessageMenuIndex(null);
+      }
+    };
+    if (openMessageMenuIndex !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMessageMenuIndex]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -50,37 +72,56 @@ const ChatInterface = ({
       msg.sender === 'error' && msg.text.includes('Daily limit reached')
     );
 
-  // Focus edit textarea when entering edit mode
+  // Focus and size textarea to fill the locked bubble (no resize of the box)
   useEffect(() => {
     if (editingIndex !== null && editTextareaRef.current) {
-      editTextareaRef.current.focus();
-      editTextareaRef.current.setSelectionRange(
-        editTextareaRef.current.value.length,
-        editTextareaRef.current.value.length
-      );
+      const ta = editTextareaRef.current;
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
     }
-  }, [editingIndex]);
+  }, [sessionId, editingIndex]);
+
+  const handleMessageMenuClick = (e, index) => {
+    e.stopPropagation();
+    setOpenMessageMenuIndex(openMessageMenuIndex === index ? null : index);
+  };
 
   const handleEdit = (index) => {
-    if (messages[index] && messages[index].sender !== 'error' && messages[index].sender !== 'system') {
-      // Warn user that editing will delete subsequent messages
-      const hasSubsequentMessages = index < messages.length - 1;
-      if (hasSubsequentMessages) {
-        const confirmEdit = window.confirm(
-          'Editing this message will delete all messages after it. Continue?'
-        );
-        if (!confirmEdit) {
-          return;
-        }
-      }
-      setEditingIndex(index);
-      setEditText(messages[index].text);
+    if (messages[index] && messages[index].sender !== 'user') return;
+    const rowEl = messageRowRefs.current[index];
+    const contentEl = rowEl?.firstElementChild;
+    let captureWidth = null;
+    let captureHeight = null;
+    if (contentEl) {
+      captureWidth = contentEl.offsetWidth;
+      captureHeight = contentEl.offsetHeight;
     }
+    setEditStateBySession(prev => ({
+      ...prev,
+      [sessionId]: {
+        editingIndex: index,
+        editText: messages[index].text,
+        captureWidth,
+        captureHeight
+      }
+    }));
   };
 
   const handleCancelEdit = () => {
-    setEditingIndex(null);
-    setEditText('');
+    setEditStateBySession(prev => {
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+  };
+
+  const setEditTextForSession = (value) => {
+    setEditStateBySession(prev => ({
+      ...prev,
+      [sessionId]: prev[sessionId]
+        ? { ...prev[sessionId], editText: value }
+        : { editingIndex: null, editText: value }
+    }));
   };
 
   const handleSaveEdit = async () => {
@@ -88,16 +129,34 @@ const ChatInterface = ({
       handleCancelEdit();
       return;
     }
-
-    const success = await onEditMessage(editingIndex, editText.trim());
-    if (success) {
-      setEditingIndex(null);
-      setEditText('');
+    const hasSubsequentMessages = editingIndex < messages.length - 1;
+    if (hasSubsequentMessages) {
+      const confirmSave = window.confirm(
+        'Editing this message will delete all messages after it. Continue?'
+      );
+      if (!confirmSave) return;
     }
+    const indexToSave = editingIndex;
+    const textToSave = editText.trim();
+    // Close edit UI immediately so the message shows normally while waiting for the AI reply
+    setEditStateBySession(prev => {
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+    await onEditMessage(indexToSave, textToSave);
   };
 
   const handleDelete = async (index) => {
+    if (messages[index] && messages[index].sender !== 'user') return;
+    setOpenMessageMenuIndex(null);
     await onDeleteMessage(index);
+  };
+
+  const handleEditFromMenu = (e, index) => {
+    e.stopPropagation();
+    setOpenMessageMenuIndex(null);
+    handleEdit(index);
   };
 
   const handleEditKeyPress = (e) => {
@@ -111,7 +170,11 @@ const ChatInterface = ({
   };
 
   const canEditDelete = (message) => {
-    return message && message.sender !== 'error' && message.sender !== 'system';
+    return message && message.sender === 'user';
+  };
+
+  const handleEditInputChange = (e) => {
+    setEditTextForSession(e.target.value);
   };
 
   return (
@@ -128,31 +191,37 @@ const ChatInterface = ({
         {messages.map((message, index) => (
           <div
             key={message.id}
+            ref={(el) => { messageRowRefs.current[index] = el; }}
             className={`message ${message.sender}`}
-            onMouseEnter={() => setHoveredIndex(index)}
-            onMouseLeave={() => setHoveredIndex(null)}
           >
-            <div className="message-content">
+            <div
+              className="message-content"
+              style={editingIndex === index && captureWidth != null && captureHeight != null
+                ? { width: captureWidth, height: captureHeight, minWidth: captureWidth, minHeight: captureHeight, boxSizing: 'border-box' }
+                : undefined
+              }
+            >
               {editingIndex === index ? (
                 <div className="message-edit-container">
                   <textarea
                     ref={editTextareaRef}
                     className="message-edit-input"
                     value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
+                    onChange={handleEditInputChange}
                     onKeyDown={handleEditKeyPress}
-                    rows="3"
                   />
                   <div className="message-edit-actions">
                     <button
                       className="message-edit-save"
                       onClick={handleSaveEdit}
+                      title="Confirm"
                     >
-                      Save
+                      Confirm
                     </button>
                     <button
                       className="message-edit-cancel"
                       onClick={handleCancelEdit}
+                      title="Cancel"
                     >
                       Cancel
                     </button>
@@ -162,25 +231,43 @@ const ChatInterface = ({
                 <>
                   <div className="message-text">{message.text}</div>
                   <div className="message-footer">
-                    <div className="message-timestamp">{message.timestamp}</div>
-                    {canEditDelete(message) && hoveredIndex === index && (
-                      <div className="message-actions">
-                        <button
-                          className="message-action-btn edit-btn"
-                          onClick={() => handleEdit(index)}
-                          title="Edit message"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="message-action-btn delete-btn"
-                          onClick={() => handleDelete(index)}
-                          title="Delete message"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    )}
+                    <div className="message-footer-right">
+                      {canEditDelete(message) && (
+                        <div className={`message-menu ${openMessageMenuIndex === index ? 'open' : ''}`}>
+                          <button
+                            type="button"
+                            className="message-menu-button"
+                            onClick={(e) => handleMessageMenuClick(e, index)}
+                            title="More options"
+                          >
+                            ⋯
+                          </button>
+                          {openMessageMenuIndex === index && (
+                            <div className="message-menu-dropdown">
+                              <button
+                                type="button"
+                                className="message-menu-item"
+                                onClick={(e) => handleEditFromMenu(e, index)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="message-menu-item delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMessageMenuIndex(null);
+                                  handleDelete(index);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="message-timestamp">{message.timestamp}</div>
+                    </div>
                   </div>
                 </>
               )}
