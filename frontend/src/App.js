@@ -356,6 +356,132 @@ function App() {
     }
   };
 
+  // Calculate backend index for a message (excludes error messages, accounts for system prompt)
+  // Backend index is the position in conversation_history array (0 = system, 1+ = user/assistant messages)
+  const getBackendIndex = (messageIndex, messages) => {
+    // Count how many user/ai messages come before this message index
+    let count = 0;
+    
+    for (let i = 0; i < messageIndex; i++) {
+      // Only count user and ai messages (skip error messages and system)
+      if (messages[i] && (messages[i].sender === 'user' || messages[i].sender === 'ai')) {
+        count++;
+      }
+    }
+    
+    // Backend index = count + 1 (because system prompt is at index 0)
+    return count + 1;
+  };
+
+  // Edit a message
+  const editMessage = async (messageIndex, newContent) => {
+    if (!activeChatId || !username) return false;
+    
+    const activeChat = getActiveChat();
+    if (!activeChat || !activeChat.messages[messageIndex]) return false;
+    
+    const message = activeChat.messages[messageIndex];
+    
+    // Can only edit user and ai messages (not error messages)
+    if (message.sender === 'error' || message.sender === 'system') {
+      return false;
+    }
+    
+    const backendIndex = getBackendIndex(messageIndex, activeChat.messages);
+    const role = message.sender === 'user' ? 'user' : 'assistant';
+    
+    try {
+      const response = await fetch('/message/edit', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user': `test-${username}`
+        },
+        body: JSON.stringify({
+          session_id: activeChatId,
+          message_index: backendIndex,
+          new_content: newContent,
+          role: role
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // Update the message in frontend and remove all messages after it
+      const updatedMessages = [...activeChat.messages];
+      updatedMessages[messageIndex] = {
+        ...updatedMessages[messageIndex],
+        text: newContent
+      };
+      
+      // Remove all messages after the edited one (they depend on the edited context)
+      // Also remove error messages that come after
+      const truncatedMessages = updatedMessages.slice(0, messageIndex + 1);
+      
+      updateChatMessages(activeChatId, truncatedMessages);
+      return true;
+    } catch (error) {
+      console.error('Error editing message:', error);
+      alert(`Failed to edit message: ${error.message}`);
+      return false;
+    }
+  };
+
+  // Delete a message
+  const deleteMessage = async (messageIndex) => {
+    if (!activeChatId || !username) return false;
+    
+    const activeChat = getActiveChat();
+    if (!activeChat || !activeChat.messages[messageIndex]) return false;
+    
+    const message = activeChat.messages[messageIndex];
+    
+    // Can only delete user and ai messages (not error messages)
+    if (message.sender === 'error' || message.sender === 'system') {
+      return false;
+    }
+    
+    // Confirm deletion (warn that subsequent messages will also be deleted)
+    if (!window.confirm('Are you sure you want to delete this message? All messages after it will also be deleted.')) {
+      return false;
+    }
+    
+    const backendIndex = getBackendIndex(messageIndex, activeChat.messages);
+    
+    try {
+      const response = await fetch('/message/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user': `test-${username}`
+        },
+        body: JSON.stringify({
+          session_id: activeChatId,
+          message_index: backendIndex
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // Remove the message and all messages after it from frontend
+      const updatedMessages = activeChat.messages.slice(0, messageIndex);
+      updateChatMessages(activeChatId, updatedMessages);
+      return true;
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert(`Failed to delete message: ${error.message}`);
+      return false;
+    }
+  };
+
   const activeChat = getActiveChat();
 
   // Show username input if no username is set or if user wants to login
@@ -463,6 +589,8 @@ function App() {
                   onSendMessage={sendMessage}
                   isLoading={isLoading}
                   userStatus={userStatus}
+                  onEditMessage={editMessage}
+                  onDeleteMessage={deleteMessage}
                 />
               )}
             </main>

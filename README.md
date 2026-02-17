@@ -1,14 +1,18 @@
 # ChatGPT Clone
 
-A simple ChatGPT clone built with React frontend and Python Flask backend, integrated with OpenAI's GPT API.
+A simple ChatGPT clone built with React frontend and Python Flask backend, integrated with **Ollama for local, private, and free AI inference**.
 
 ## Features
 
-- 🚀 Modern, responsive UI similar to ChatGPT
-- 💬 Real-time chat interface with OpenAI GPT-3.5-turbo
-- 🎨 Beautiful gradient design with smooth animations
-- 📱 Mobile-responsive design
-- ⚡ Fast and lightweight
+- Modern, responsive UI similar to ChatGPT
+- Real-time chat interface with **local Ollama LLM**
+- **100% Private**: All AI processing happens locally on your machine
+- **Completely Free**: No API costs, no usage limits
+- Beautiful gradient design with smooth animations
+- Mobile-responsive design
+- Fast and lightweight
+- Multiple AI personalities with custom personality creation
+- Message persistence with multiple chat sessions
 
 ## Project Structure
 
@@ -32,11 +36,33 @@ Chatbot/
 
 - Python 3.7+
 - Node.js 14+
-- OpenAI API key
+- **Ollama** installed on your machine
+- A local LLM model (default: `llama3.2`)
 
 ## Setup Instructions
 
-### 1. Backend Setup
+### 1. Install Ollama
+
+1. **Download and install Ollama** from [https://ollama.ai]
+
+2. **Start Ollama service** (usually runs automatically after installation):
+   ```bash
+   ollama serve
+   ```
+   The service runs on `http://localhost:11434` by default
+
+3. **Download a model** (default is `llama3.2`, but you can choose any):
+   ```bash
+   ollama pull llama3.2
+   ```
+   
+   Other popular models:
+   - `llama3.2` (default, ~2GB, good balance)
+   - `llama3.2:3b` (smaller, faster)
+   - `mistral` (excellent quality)
+   - `phi3` (small and efficient)
+
+### 2. Backend Setup
 
 1. Navigate to the backend directory:
    ```bash
@@ -54,14 +80,13 @@ Chatbot/
    pip install -r requirements.txt
    ```
 
-4. Set up environment variables:
-   ```bash
-   cp env.example .env
+4. (Optional) Set up environment variables:
+   Create a `.env` file if you want to customize:
    ```
-   Edit `.env` and add your OpenAI API key:
+   OLLAMA_API_URL=http://localhost:11434/api/chat
+   OLLAMA_MODEL=llama3.2
    ```
-   OPENAI_API_KEY=your_actual_api_key_here
-   ```
+   These are the defaults, so you can skip this step if you're happy with them.
 
 5. Start the Flask server:
    ```bash
@@ -69,7 +94,7 @@ Chatbot/
    ```
    The backend will run on `http://localhost:5000`
 
-### 2. Frontend Setup
+### 3. Frontend Setup
 
 1. Navigate to the frontend directory:
    ```bash
@@ -102,45 +127,14 @@ Chatbot/
 
 ## Configuration
 
-### OpenAI API
-- Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-- Add it to the `.env` file in the backend directory
+### Ollama Settings
+You can customize Ollama settings in `backend/app.py` or via environment variables:
+- **Model**: Default is `llama3.2` (set via `OLLAMA_MODEL` env var)
+- **API URL**: Default is `http://localhost:11434/api/chat` (set via `OLLAMA_API_URL` env var)
+- **Temperature**: 0.5 (lower = follows instructions better)
+- **Max tokens**: 600 (maximum response length)
 
-### Model Settings
-You can modify the AI model settings in `backend/app.py`:
-- Model: Currently using `gpt-3.5-turbo`
-- Max tokens: 1000
-- Temperature: 0.7
-
-## Security Notes
-
-- Never commit your `.env` file to version control
-- The `.env` file is already in `.gitignore`
-- Keep your OpenAI API key secure
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CORS errors**: Make sure the backend is running on port 5000
-2. **API key errors**: Verify your OpenAI API key is correct and has sufficient credits
-3. **Port conflicts**: Change the port in `app.py` if port 5000 is in use
-
-### Error Messages
-
-- "No message provided": Make sure you're sending a message in the request
-- "OpenAI API error": Check your API key and internet connection
-
-## Technologies Used
-
-- **Backend**: Python, Flask, OpenAI API
-- **Frontend**: React, CSS3
-- **Styling**: Modern CSS with gradients and animations
-
-## License
-
-This project is for educational purposes. Please respect OpenAI's terms of service.
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
+To change the model, either:
+1. Set `OLLAMA_MODEL` in your `.env` file
+2. Or modify `OLLAMA_MODEL` directly in `backend/app.py`
+3. Make sure you've downloaded the model: `ollama pull <model-name>`

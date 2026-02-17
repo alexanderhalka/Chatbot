@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
-import openai
+import requests
 from datetime import datetime, date
 
 # Load environment variables
@@ -11,8 +11,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Configure OpenAI
-openai.api_key = os.getenv('OPENAI_API_KEY')
+# Configure Ollama
+OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434/api/chat')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')  # Default model, can be changed
 
 # In-memory storage for custom personalities (in production, use a database)
 custom_personalities = {}
@@ -22,7 +23,7 @@ PERSONALITIES = {
     "assistant": {
         "name": "Regular Assistant",
         "description": "Helpful AI that adapts to your communication style",
-        "system_prompt": "You are ChatGPT, a conversational AI.\n\nPrimary rule: match the user's tone, length, and style appropriately.\n- If the user writes plainly (\"hi\", \"hello\"), keep it plain. Do NOT add extra cheer or filler.\n- If the user uses text emoticons (:3, :D, owo), reply in kind. Prefer ASCII emoticons when the user does. Do not swap them for Unicode emoji.\n- Only use Unicode emoji if the user used them first.\n- Short input → short reply. Long or serious input → thoughtful, empathetic reply.\n- Avoid canned openings like \"Hey there!\" unless the user wrote something similar.\n- Be clear, natural, and helpful; never robotic or forced.\n\nExamples:\nUser: \":3\"\nAssistant: \":3 hi — what's up?\"\n\nUser: \"hiii :D\"\nAssistant: \"hiii :D how's it going??\"\n\nUser: \"hi\"\nAssistant: \"hey, how's it going?\"\n\nUser: \"I'm really not okay. My family just died.\"\nAssistant: \"I'm so sorry. That's an unbearable loss. If you want to talk about what happened, I'm here. I can also share resources or coping steps if that would help.\""
+        "system_prompt": "You are a helpful conversational AI. Follow these rules strictly.\n\nCRITICAL - Match the user's style:\n- User said plain \"hi\" or \"hello\" with no emoticons? Reply with a normal short sentence like \"Hey, how's it going?\" or \"Hi, what's up?\" Do NOT use :3, :), or any emoticons. No exceptions.\n- User used emoticons or casual slang (e.g. \"hiii :D\", \":3\")? Then you may reply in a similar playful style.\n- NEVER reply with only an emoticon (e.g. \":3\" or \":)\"). Always write at least one full sentence unless the user only sent a single symbol.\n- If the user says you're acting weird, or asks why you used an emoticon, or says \"all I said was hello\" — switch immediately to plain, friendly sentences. Apologize briefly and respond normally.\n\nKeep responses natural and helpful. Short user message → short reply. Serious topic → empathetic, clear reply."
     },
     "coach": {
         "name": "Coach",
@@ -281,25 +282,61 @@ def chat():
 
         conversation_history[session_id].append({"role": "user", "content": user_message})
 
-        messages = [{"role": m["role"], "content": m["content"]}
-                    for m in conversation_history[session_id]]
+        # Prepare messages for Ollama
+        # Ollama supports system, user, and assistant roles
+        # We'll pass all messages including the system prompt
+        ollama_messages = [
+            {"role": m["role"], "content": m["content"]}
+            for m in conversation_history[session_id]
+        ]
+        
+        # Ollama API call
+        try:
+            ollama_request = {
+                "model": OLLAMA_MODEL,
+                "messages": ollama_messages,
+                "stream": False,
+                "options": {
+                    "temperature": 0.5,   # Lower = follows instructions better (was 0.8)
+                    "top_p": 1.0,
+                    "num_predict": 600
+                }
+            }
+            
+            ollama_resp = requests.post(OLLAMA_API_URL, json=ollama_request, timeout=60)
+            ollama_resp.raise_for_status()
+            ollama_data = ollama_resp.json()
+            
+            # Extract response from Ollama format
+            ai = ollama_data.get('message', {}).get('content', '')
+            
+            if not ai:
+                raise ValueError("Empty response from Ollama")
+                
+        except requests.exceptions.ConnectionError:
+            return jsonify({
+                'error': f'Cannot connect to Ollama at {OLLAMA_API_URL}. Make sure Ollama is running (ollama serve) and the URL is correct. Install from https://ollama.ai'
+            }), 503
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'error': 'Ollama request timed out. The model may be taking too long to respond.'
+            }), 504
+        except requests.exceptions.HTTPError as e:
+            return jsonify({
+                'error': f'Ollama API error: {str(e)}. Make sure the model "{OLLAMA_MODEL}" is installed. Run: ollama pull {OLLAMA_MODEL}'
+            }), 502
+        except Exception as e:
+            return jsonify({
+                'error': f'Error calling Ollama: {str(e)}'
+            }), 500
 
-        resp = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            temperature=0.8,
-            top_p=1.0,
-            frequency_penalty=0.2,
-            presence_penalty=0.0,
-            max_tokens=600,
-        )
-
-        ai = resp.choices[0].message.content
         conversation_history[session_id].append({"role": "assistant", "content": ai})
         
         # Keep only last 20 messages to prevent context from getting too long
-        if len(conversation_history[session_id]) > 20:
-            conversation_history[session_id] = conversation_history[session_id][-20:]
+        # Always preserve the system prompt (first message)
+        if len(conversation_history[session_id]) > 21:  # 1 system + 20 conversation
+            system_msg = conversation_history[session_id][0]  # Save system prompt
+            conversation_history[session_id] = [system_msg] + conversation_history[session_id][-20:]
         
         return jsonify({
             'response': ai,
@@ -342,6 +379,87 @@ def user_status():
         'remaining': FREE_DAILY_MSG_LIMIT - user_daily_counts[user_id][today],
         'limit_enabled': True
     })
+
+@app.route('/message/edit', methods=['PUT'])
+def edit_message():
+    """Edit an existing message in the conversation"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id', 'default')
+        message_id = data.get('message_id')  # Frontend message ID for reference
+        message_index = data.get('message_index')  # Index in conversation_history array
+        new_content = data.get('new_content', '').strip()
+        role = data.get('role')  # 'user' or 'assistant'
+        
+        if not new_content:
+            return jsonify({'error': 'Message content cannot be empty'}), 400
+        
+        if session_id not in conversation_history:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        messages = conversation_history[session_id]
+        
+        # Skip system prompt (index 0), so message_index needs to account for that
+        # message_index should be the actual index in the array (0 = system, 1 = first user/assistant, etc.)
+        if message_index is None or message_index < 1 or message_index >= len(messages):
+            return jsonify({'error': 'Invalid message index'}), 400
+        
+        # Only allow editing user messages or assistant messages
+        if messages[message_index]['role'] not in ['user', 'assistant']:
+            return jsonify({'error': 'Cannot edit system messages'}), 400
+        
+        # Verify role matches
+        if role and messages[message_index]['role'] != role:
+            return jsonify({'error': 'Role mismatch'}), 400
+        
+        # Update the message
+        messages[message_index]['content'] = new_content
+        
+        # Delete all messages after this one (they depend on the edited context)
+        messages[:] = messages[:message_index + 1]
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Message updated successfully',
+            'updated_message': messages[message_index],
+            'truncated': True
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/message/delete', methods=['DELETE'])
+def delete_message():
+    """Delete a message from the conversation"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id', 'default')
+        message_index = data.get('message_index')  # Index in conversation_history array
+        
+        if session_id not in conversation_history:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        messages = conversation_history[session_id]
+        
+        # Cannot delete system prompt (index 0) or if index is invalid
+        if message_index is None or message_index < 1 or message_index >= len(messages):
+            return jsonify({'error': 'Invalid message index'}), 400
+        
+        # Get the message before deletion (for frontend reference)
+        deleted_message = messages[message_index]
+        
+        # Delete the message and all messages after it (they depend on the deleted context)
+        messages[:] = messages[:message_index]
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Message deleted successfully',
+            'deleted_message': deleted_message,
+            'truncated': True
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/clear-memory', methods=['POST'])
 def clear_memory():
