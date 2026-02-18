@@ -12,9 +12,15 @@ const ChatInterface = ({
   onDeleteMessage,
   onRedoAiMessage
 }) => {
-  const [inputMessage, setInputMessage] = useState('');
+  // Draft message per chat: { [sessionId]: string } so switching chats preserves in-progress text
+  const [draftBySession, setDraftBySession] = useState({});
   // Edit state per chat: { [sessionId]: { editingIndex, editText } } so switching chats preserves in-progress edits
   const [editStateBySession, setEditStateBySession] = useState({});
+
+  const inputMessage = draftBySession[sessionId] ?? '';
+  const setInputMessage = (value) => {
+    setDraftBySession(prev => ({ ...prev, [sessionId]: typeof value === 'function' ? value(prev[sessionId] ?? '') : value }));
+  };
   const [openMessageMenuIndex, setOpenMessageMenuIndex] = useState(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -34,6 +40,11 @@ const ChatInterface = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Focus the message input when switching to another chat so the user can type immediately
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [sessionId]);
 
   // Close message menu when clicking outside (same as convo sidebar)
   useEffect(() => {
