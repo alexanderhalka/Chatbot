@@ -407,6 +407,37 @@ def chat_regenerate():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/chat/suggest-title', methods=['POST'])
+def chat_suggest_title():
+    """Generate a short chat title from the first user message and first AI reply."""
+    try:
+        data = request.get_json() or {}
+        user_message = (data.get('user_message') or '').strip()
+        ai_message = (data.get('ai_message') or '').strip()
+        if not user_message or not ai_message:
+            return jsonify({'error': 'user_message and ai_message required'}), 400
+        # Keep prompts short for title generation
+        user_preview = user_message[:500] + ('...' if len(user_message) > 500 else '')
+        ai_preview = ai_message[:500] + ('...' if len(ai_message) > 500 else '')
+        system = (
+            'You are a titling assistant. Given the first user message and first assistant reply '
+            'of a chat, reply with a single short chat title (2–6 words) that summarizes the topic. '
+            'Reply with ONLY the title, no quotes, no punctuation, no explanation.'
+        )
+        user_prompt = f'User: {user_preview}\n\nAssistant: {ai_preview}'
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_prompt}
+        ]
+        title = _generate_ollama_response(messages)
+        title = (title or '').strip().split('\n')[0].strip()[:200] or 'New Chat'
+        return jsonify({'title': title})
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Cannot connect to Ollama'}), 503
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/user/status', methods=['GET'])
 def user_status():
     """Get user's current status and daily count"""

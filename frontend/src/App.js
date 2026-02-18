@@ -45,7 +45,7 @@ function App() {
       // Create initial chat for new user
       const initialChat = {
         id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        title: 'Chat 1',
+        title: 'New Chat',
         messages: [],
         lastMessage: null,
         personality: 'assistant' // Default personality
@@ -142,7 +142,7 @@ function App() {
     }
     const newChat = {
       id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      title: `Chat ${nextChatNumber}`,
+      title: 'New Chat',
       messages: [],
       lastMessage: null,
       personality: 'assistant' // Default personality
@@ -174,7 +174,7 @@ function App() {
         // If no chats left, create a new one
         const newChat = {
           id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          title: 'Chat 1',
+          title: 'New Chat',
           messages: [],
           lastMessage: null,
           personality: 'assistant'
@@ -340,6 +340,31 @@ function App() {
       // Add AI response
       const finalMessages = [...updatedMessages, aiMessage];
       updateChatMessages(activeChatId, finalMessages);
+
+      // Suggest a chat title from first exchange when still "New Chat"
+      if (activeChat.title === 'New Chat') {
+        const firstUser = finalMessages.find(m => m.sender === 'user');
+        const firstAi = finalMessages.find(m => m.sender === 'ai');
+        if (firstUser && firstAi) {
+          fetch('/chat/suggest-title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_message: firstUser.text, ai_message: firstAi.text })
+          })
+            .then(r => r.json())
+            .then((suggestData) => {
+              const title = (suggestData.title || '').trim().slice(0, 200) || 'New Chat';
+              setChats(prev => {
+                const chat = prev.find(c => c.id === activeChatId);
+                if (!chat || chat.title !== 'New Chat') return prev;
+                const next = prev.map(c => c.id === activeChatId ? { ...c, title } : c);
+                saveUserChats(username, next, activeChatId, nextChatNumber);
+                return next;
+              });
+            })
+            .catch(() => {});
+        }
+      }
       
       // Update user status after successful message
       if (data.daily_count !== undefined) {
