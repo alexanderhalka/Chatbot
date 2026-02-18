@@ -69,6 +69,8 @@ body.dark-mode {
   text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   transition: background 0.3s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .dark-mode .app-header {
@@ -82,18 +84,33 @@ body.dark-mode {
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.chat-header-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.chat-header-title h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.app-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 0;
+  flex-shrink: 0;
 }
 
 .personality-btn {
@@ -217,8 +234,8 @@ body.dark-mode {
     gap: 0.5rem;
   }
   
-  .app-header h1 {
-    font-size: 1.5rem;
+  .chat-header-title h1 {
+    font-size: 0.9375rem;
   }
   
   .user-status {

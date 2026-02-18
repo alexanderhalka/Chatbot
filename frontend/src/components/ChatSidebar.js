@@ -1,10 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import './ChatSidebar.css';
 
 const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteChat, onRenameChat }) => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [truncatedTitleIds, setTruncatedTitleIds] = useState(new Set());
+  const titleRefs = useRef({});
+
+  // Show tooltip on chat title only when text is truncated
+  useLayoutEffect(() => {
+    const next = new Set();
+    chats.forEach((chat) => {
+      if (editingChatId === chat.id) return;
+      const el = titleRefs.current[chat.id];
+      if (el && el.scrollWidth > el.clientWidth) next.add(chat.id);
+    });
+    setTruncatedTitleIds((prev) =>
+      prev.size === next.size && [...prev].every((id) => next.has(id)) ? prev : next
+    );
+  }, [chats, editingChatId]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const next = new Set();
+      chats.forEach((chat) => {
+        if (editingChatId === chat.id) return;
+        const el = titleRefs.current[chat.id];
+        if (el && el.scrollWidth > el.clientWidth) next.add(chat.id);
+      });
+      setTruncatedTitleIds((prev) =>
+        prev.size === next.size && [...prev].every((id) => next.has(id)) ? prev : next
+      );
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [chats, editingChatId]);
 
   // Handle clicks outside the menu to close it
   useEffect(() => {
@@ -57,7 +88,7 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
   const handleRenameSubmit = (e) => {
     e.preventDefault();
     if (editingChatId && editValue.trim()) {
-      const sanitizedValue = editValue.trim().substring(0, 50); // Limit to 50 characters
+      const sanitizedValue = editValue.trim();
       onRenameChat(editingChatId, sanitizedValue);
       setEditingChatId(null);
       setEditValue('');
@@ -91,7 +122,7 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
           className="new-chat-btn"
           title="Start new chat"
         >
-          ➕ New Chat
+          New Chat
         </button>
       </div>
       
@@ -112,13 +143,18 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
                     onKeyDown={handleRenameKeyPress}
                     onBlur={handleRenameCancel}
                     className="rename-input"
-                    maxLength={50}
                     autoFocus
                   />
                 </form>
               ) : (
                 <>
-                  <span className="chat-title">{chat.title}</span>
+                  <span
+                    ref={(el) => { titleRefs.current[chat.id] = el; }}
+                    className="chat-title"
+                    title={truncatedTitleIds.has(chat.id) ? chat.title : undefined}
+                  >
+                    {chat.title}
+                  </span>
                   <span className="chat-preview">
                     {chat.lastMessage || 'No messages yet'}
                   </span>

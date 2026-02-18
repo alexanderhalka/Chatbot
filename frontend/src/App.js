@@ -190,8 +190,7 @@ function App() {
       return; // Don't rename if empty
     }
     
-    // Sanitize the title to prevent breaking the app
-    const sanitizedTitle = newTitle.trim().substring(0, 50);
+    const sanitizedTitle = newTitle.trim();
     
     const updatedChats = chats.map(chat => 
       chat.id === chatId 
@@ -551,7 +550,7 @@ function App() {
         <div className="app-container">
           <div className="main-content">
             <header className="app-header">
-              <h1>ChatGPT Clone</h1>
+              <h1>Chatbot</h1>
             </header>
             <main className="chat-main">
               <UsernameInput onUsernameSet={handleUsernameSet} />
@@ -609,7 +608,9 @@ function App() {
           <div className="main-content">
             <header className="app-header">
               <div className="header-content">
-                <h1>ChatGPT Clone</h1>
+                <div className="chat-header-title">
+                  <h1 title={activeChat ? activeChat.title : 'Chatbot'}>{activeChat ? activeChat.title : 'Chatbot'}</h1>
+                </div>
                 <div className="header-right">
                   {activeChat && (
                     <button 

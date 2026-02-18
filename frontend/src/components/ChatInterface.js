@@ -200,14 +200,6 @@ const ChatInterface = ({
   return (
     <div className="chat-container">
       <div className="messages-container">
-        {messages.length === 0 && (
-          <div className="welcome-message">
-            <h2>Welcome to ChatGPT Clone!</h2>
-            <p>Start a conversation by typing a message below.</p>
-            <p><small>I'll remember our conversation and important details about you!</small></p>
-          </div>
-        )}
-        
         {messages.map((message, index) => (
           <div
             key={message.id}
