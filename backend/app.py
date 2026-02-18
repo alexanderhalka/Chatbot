@@ -352,6 +352,61 @@ def chat():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/chat/regenerate', methods=['POST'])
+def chat_regenerate():
+    """Remove the AI message at the given index (or last) and generate a new one (redo).
+    The model is told the previous response so it can generate a different one."""
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id', 'default')
+        message_index = data.get('message_index')  # backend index of the AI message to redo
+        if session_id not in conversation_history or len(conversation_history[session_id]) < 2:
+            return jsonify({'error': 'Conversation not found or too short'}), 404
+        messages = conversation_history[session_id]
+        previous_ai_content = None
+        if message_index is not None:
+            if message_index < 1 or message_index >= len(messages) or messages[message_index]['role'] != 'assistant':
+                return jsonify({'error': 'Invalid message index or not an assistant message'}), 400
+            previous_ai_content = messages[message_index]['content']
+            messages[:] = messages[:message_index]
+        else:
+            if messages[-1]['role'] != 'assistant':
+                return jsonify({'error': 'Last message must be from the assistant to regenerate'}), 400
+            previous_ai_content = messages[-1]['content']
+            messages.pop()
+        if messages[-1]['role'] != 'user':
+            return jsonify({'error': 'Conversation must end with a user message to regenerate'}), 400
+        # Build request that includes "don't repeat your previous response" instruction
+        messages_for_api = list(messages)
+        if previous_ai_content:
+            prev_truncated = previous_ai_content[:800] + ("..." if len(previous_ai_content) > 800 else "")
+            no_repeat = (
+                "[Instruction: Your previous response was:\n"
+                + prev_truncated
+                + "\n\nDo not repeat it. Generate a new, different response to the user's last message above.]"
+            )
+            messages_for_api = messages_for_api + [{"role": "user", "content": no_repeat}]
+        try:
+            ai = _generate_ollama_response(messages_for_api)
+        except requests.exceptions.ConnectionError:
+            return jsonify({
+                'error': f'Cannot connect to Ollama at {OLLAMA_API_URL}. Make sure Ollama is running.'
+            }), 503
+        except requests.exceptions.Timeout:
+            return jsonify({'error': 'Ollama request timed out.'}), 504
+        except requests.exceptions.HTTPError as e:
+            return jsonify({
+                'error': f'Ollama API error: {str(e)}. Make sure the model "{OLLAMA_MODEL}" is installed.'
+            }), 502
+        except Exception as e:
+            return jsonify({'error': f'Error calling Ollama: {str(e)}'}), 500
+        messages.append({"role": "assistant", "content": ai})
+        return jsonify({'response': ai, 'status': 'success'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/user/status', methods=['GET'])
 def user_status():
     """Get user's current status and daily count"""

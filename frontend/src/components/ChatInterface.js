@@ -9,7 +9,8 @@ const ChatInterface = ({
   isLoading,
   userStatus,
   onEditMessage,
-  onDeleteMessage
+  onDeleteMessage,
+  onRedoAiMessage
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   // Edit state per chat: { [sessionId]: { editingIndex, editText } } so switching chats preserves in-progress edits
@@ -172,6 +173,12 @@ const ChatInterface = ({
     }
   };
 
+  const handleRedoFromMenu = async (e, index) => {
+    e.stopPropagation();
+    setOpenMessageMenuIndex(null);
+    if (onRedoAiMessage) await onRedoAiMessage(index);
+  };
+
   const handleEditKeyPress = (e) => {
     if (e.key === 'Enter' && e.shiftKey === false) {
       e.preventDefault();
@@ -240,12 +247,20 @@ const ChatInterface = ({
                     </button>
                   </div>
                 </div>
+              ) : message.loading ? (
+                <div className="loading-indicator">
+                  <div className="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="message-text">{message.text}</div>
                   <div className="message-footer">
                     <div className="message-footer-right">
-                      {canEditDelete(message) && (
+                      {message.sender === 'user' && (
                         <div className={`message-menu ${openMessageMenuIndex === index ? 'open' : ''}`}>
                           <button
                             type="button"
@@ -257,20 +272,8 @@ const ChatInterface = ({
                           </button>
                           {openMessageMenuIndex === index && (
                             <div className="message-menu-dropdown">
-                              <button
-                                type="button"
-                                className="message-menu-item"
-                                onClick={(e) => handleCopyFromMenu(e, index)}
-                              >
-                                Copy
-                              </button>
-                              <button
-                                type="button"
-                                className="message-menu-item"
-                                onClick={(e) => handleEditFromMenu(e, index)}
-                              >
-                                Edit
-                              </button>
+                              <button type="button" className="message-menu-item" onClick={(e) => handleCopyFromMenu(e, index)}>Copy</button>
+                              <button type="button" className="message-menu-item" onClick={(e) => handleEditFromMenu(e, index)}>Edit</button>
                               <button
                                 type="button"
                                 className="message-menu-item delete"
@@ -287,6 +290,24 @@ const ChatInterface = ({
                         </div>
                       )}
                       <div className="message-timestamp">{message.timestamp}</div>
+                      {message.sender === 'ai' && (
+                        <div className={`message-menu ${openMessageMenuIndex === index ? 'open' : ''}`}>
+                          <button
+                            type="button"
+                            className="message-menu-button message-menu-button-ai"
+                            onClick={(e) => handleMessageMenuClick(e, index)}
+                            title="More options"
+                          >
+                            ⋯
+                          </button>
+                          {openMessageMenuIndex === index && (
+                            <div className="message-menu-dropdown">
+                              <button type="button" className="message-menu-item" onClick={(e) => handleRedoFromMenu(e, index)}>Redo</button>
+                              <button type="button" className="message-menu-item" onClick={(e) => handleCopyFromMenu(e, index)}>Copy</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>

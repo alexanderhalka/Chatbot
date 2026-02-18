@@ -503,6 +503,45 @@ function App() {
     }
   };
 
+  // Redo AI message: replace with loading in place, then swap in new response
+  const redoAiMessage = async (messageIndex) => {
+    if (!activeChatId || !username) return false;
+    const activeChat = getActiveChat();
+    if (!activeChat || !activeChat.messages[messageIndex] || activeChat.messages[messageIndex].sender !== 'ai') return false;
+    const backendIndex = getBackendIndex(messageIndex, activeChat.messages);
+    const previousMessage = activeChat.messages[messageIndex];
+    const truncated = activeChat.messages.slice(0, messageIndex + 1);
+    truncated[messageIndex] = { ...previousMessage, text: '', loading: true };
+    updateChatMessages(activeChatId, truncated);
+    try {
+      const response = await fetch('/chat/regenerate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user': `test-${username}`
+        },
+        body: JSON.stringify({ session_id: activeChatId, message_index: backendIndex })
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      const updated = [...truncated];
+      updated[messageIndex] = {
+        ...previousMessage,
+        text: data.response,
+        timestamp: new Date().toLocaleTimeString(),
+        loading: false
+      };
+      updateChatMessages(activeChatId, updated);
+      return true;
+    } catch (error) {
+      console.error('Error regenerating message:', error);
+      alert(`Failed to regenerate: ${error.message}`);
+      truncated[messageIndex] = previousMessage;
+      updateChatMessages(activeChatId, truncated);
+      return false;
+    }
+  };
+
   const activeChat = getActiveChat();
 
   // Show username input if no username is set or if user wants to login
@@ -612,6 +651,7 @@ function App() {
                   userStatus={userStatus}
                   onEditMessage={editMessage}
                   onDeleteMessage={deleteMessage}
+                  onRedoAiMessage={redoAiMessage}
                 />
               )}
             </main>

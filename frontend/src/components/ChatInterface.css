@@ -141,6 +141,10 @@
   justify-content: flex-end;
 }
 
+.message.ai .message-footer {
+  justify-content: flex-start;
+}
+
 /* Group three dots + timestamp together on the right, dots just left of time */
 .message-footer-right {
   display: flex;
@@ -182,6 +186,26 @@
 .message-menu-button:hover {
   background: rgba(255, 255, 255, 0.2);
   color: white;
+}
+
+/* AI message bubble: dark text and hover */
+.message.ai .message-menu-button,
+.message-menu-button-ai {
+  color: #333;
+}
+.message.ai .message-menu-button:hover,
+.message-menu-button-ai:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+.dark-mode .message.ai .message-menu-button,
+.dark-mode .message-menu-button-ai {
+  color: rgba(255, 255, 255, 0.9);
+}
+.dark-mode .message.ai .message-menu-button:hover,
+.dark-mode .message-menu-button-ai:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .message-menu-dropdown {
