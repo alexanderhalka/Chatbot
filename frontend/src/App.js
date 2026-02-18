@@ -14,7 +14,6 @@ function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [nextChatNumber, setNextChatNumber] = useState(1);
   const [username, setUsername] = useState(null);
-  const [userStatus, setUserStatus] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showPersonalityPicker, setShowPersonalityPicker] = useState(false);
   const [personalities, setPersonalities] = useState({});
@@ -87,28 +86,12 @@ function App() {
   useEffect(() => {
     if (username && !showLogin) {
       loadUserChats(username);
-      fetchUserStatus();
     }
   }, [username, showLogin]);
-
-  const fetchUserStatus = async () => {
-    try {
-      const response = await fetch('/user/status', {
-        headers: {
-          'x-user': `test-${username}`
-        }
-      });
-      const data = await response.json();
-      setUserStatus(data);
-    } catch (error) {
-      console.error('Error fetching user status:', error);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('chatbot_username');
     setUsername(null);
-    setUserStatus(null);
     setChats([]);
     setActiveChatId(null);
     setNextChatNumber(1);
@@ -305,27 +288,6 @@ function App() {
 
       const data = await response.json();
 
-      if (response.status === 429) {
-        // Daily limit reached
-        const limitMessage = {
-          id: Date.now() + 1,
-          text: `Daily limit reached (${data.limit} messages). You can change your username to continue chatting.`,
-          sender: 'error',
-          timestamp: new Date().toLocaleTimeString()
-        };
-        
-        const finalMessages = [...updatedMessages, limitMessage];
-        updateChatMessages(activeChatId, finalMessages);
-        
-        // Update user status
-        setUserStatus(prev => ({
-          ...prev,
-          daily_count: data.limit,
-          remaining: 0
-        }));
-        return;
-      }
-
       if (data.error) {
         throw new Error(data.error);
       }
@@ -364,15 +326,6 @@ function App() {
             })
             .catch(() => {});
         }
-      }
-      
-      // Update user status after successful message
-      if (data.daily_count !== undefined) {
-        setUserStatus(prev => ({
-          ...prev,
-          daily_count: data.daily_count,
-          remaining: data.limit - data.daily_count
-        }));
       }
     } catch (error) {
       const errorMessage = {
@@ -655,19 +608,6 @@ function App() {
                       {getPersonalityName(activeChat.personality || 'assistant', personalities)}
                     </button>
                   )}
-                  {userStatus && userStatus.limit_enabled && (
-                    <div className="user-status">
-                      <span className="status-text">
-                        Messages: {userStatus.daily_count}/{userStatus.daily_limit}
-                      </span>
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-fill" 
-                          style={{width: `${(userStatus.daily_count / userStatus.daily_limit) * 100}%`}}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
                   <ThemeToggle />
                   <button onClick={handleLogout} className="logout-btn">
                     Logout
@@ -683,7 +623,6 @@ function App() {
                   sessionId={activeChatId}
                   onSendMessage={sendMessage}
                   isLoading={isLoading}
-                  userStatus={userStatus}
                   onEditMessage={editMessage}
                   onDeleteMessage={deleteMessage}
                   onRedoAiMessage={redoAiMessage}

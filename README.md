@@ -1,140 +1,94 @@
-# ChatGPT Clone
+# Chatbot
 
-A simple ChatGPT clone built with React frontend and Python Flask backend, integrated with **Ollama for local, private, and free AI inference**.
+A chat application with a React frontend and Flask backend, using **Ollama** for local, private AI inference. Multiple chats, personalities, message edit/delete/redo, and auto-generated chat titles.
 
 ## Features
 
-- Modern, responsive UI similar to ChatGPT
-- Real-time chat interface with **local Ollama LLM**
-- **100% Private**: All AI processing happens locally on your machine
-- **Completely Free**: No API costs, no usage limits
-- Beautiful gradient design with smooth animations
-- Mobile-responsive design
-- Fast and lightweight
-- Multiple AI personalities with custom personality creation
-- Message persistence with multiple chat sessions
+- **Local AI** – Ollama runs on your machine; no API keys or usage limits
+- **Multiple chats** – Separate conversations with per-chat draft messages
+- **Auto chat names** – New chats start as "New Chat"; after the first exchange, the app suggests a title from context
+- **Personalities** – Built-in (Assistant, Coach, Therapist, Study Buddy, Bestie, etc.) and custom personalities
+- **Message actions** – Edit and delete your messages; redo AI replies. Three-dot menu per message (Copy, Edit, Delete for user; Redo, Copy for AI)
+- **Theme** – Light/dark mode toggle
+- **Responsive UI** – Works on desktop and mobile; chat list with truncation and tooltips
+- **Persistence** – Chats and settings stored in the browser (localStorage)
 
-## Project Structure
+## Project structure
 
 ```
 Chatbot/
-├── backend/           # Python Flask API
-│   ├── app.py        # Main Flask application
-│   ├── requirements.txt
-│   └── env.example   # Environment variables template
-├── frontend/         # React application
+├── backend/
+│   └── app.py              # Flask API (chat, personalities, suggest-title, etc.)
+├── frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── components/
+│   │   ├── components/     # ChatInterface, ChatSidebar, PersonalityPicker, etc.
 │   │   ├── App.js
 │   │   └── index.js
 │   └── package.json
+├── requirements.txt       # Python dependencies (Flask, CORS, dotenv, requests)
 └── README.md
 ```
 
 ## Prerequisites
 
-- Python 3.7+
-- Node.js 14+
-- **Ollama** installed on your machine
-- A local LLM model (default: `llama3.2`)
+- **Python 3.7+**
+- **Node.js 14+**
+- **Ollama** – [Install](https://ollama.ai) and have it running (e.g. `ollama serve`). Default model: `llama3.2`.
 
-## Setup Instructions
+## Setup
 
-### 1. Install Ollama
+### 1. Ollama
 
-1. **Download and install Ollama** from [https://ollama.ai]
-
-2. **Start Ollama service** (usually runs automatically after installation):
+1. Install from [ollama.ai](https://ollama.ai).
+2. Start Ollama (often automatic after install):
    ```bash
    ollama serve
    ```
-   The service runs on `http://localhost:11434` by default
-
-3. **Download a model** (default is `llama3.2`, but you can choose any):
+3. Pull a model (default is `llama3.2`):
    ```bash
    ollama pull llama3.2
    ```
-   
-   Other popular models:
-   - `llama3.2` (default, ~2GB, good balance)
-   - `llama3.2:3b` (smaller, faster)
-   - `mistral` (excellent quality)
-   - `phi3` (small and efficient)
 
-### 2. Backend Setup
+### 2. Backend
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+From the **project root**:
 
-2. Create a virtual environment (recommended):
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+pip install -r requirements.txt
+cd backend
+python app.py
+```
 
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Backend runs at `http://localhost:5000`.
 
-4. (Optional) Set up environment variables:
-   Create a `.env` file if you want to customize:
-   ```
-   OLLAMA_API_URL=http://localhost:11434/api/chat
-   OLLAMA_MODEL=llama3.2
-   ```
-   These are the defaults, so you can skip this step if you're happy with them.
+Optional: create `backend/.env` to override defaults:
 
-5. Start the Flask server:
-   ```bash
-   python app.py
-   ```
-   The backend will run on `http://localhost:5000`
+```
+OLLAMA_API_URL=http://localhost:11434/api/chat
+OLLAMA_MODEL=llama3.2
+```
 
-### 3. Frontend Setup
+### 3. Frontend
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
+```bash
+cd frontend
+npm install
+npm start
+```
 
-2. Install Node.js dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the React development server:
-   ```bash
-   npm start
-   ```
-   The frontend will run on `http://localhost:3000`
+Frontend runs at `http://localhost:3000` and proxies API requests to the backend.
 
 ## Usage
 
-1. Open your browser and go to `http://localhost:3000`
-2. Type your message in the input box
-3. Press Enter or click the send button
-4. Wait for the AI response
-5. Continue the conversation!
-
-## API Endpoints
-
-- `POST /chat` - Send a message and get AI response
-- `GET /health` - Health check endpoint
+1. Open `http://localhost:3000`.
+2. Enter a username.
+3. Start or select a chat; pick a personality from the header if you like.
+4. Type in the message box and send. The first user + AI exchange is used to suggest a chat title if it’s still "New Chat".
+5. Use the three-dot menu on messages to edit, delete, redo (AI), or copy.
 
 ## Configuration
 
-### Ollama Settings
-You can customize Ollama settings in `backend/app.py` or via environment variables:
-- **Model**: Default is `llama3.2` (set via `OLLAMA_MODEL` env var)
-- **API URL**: Default is `http://localhost:11434/api/chat` (set via `OLLAMA_API_URL` env var)
-- **Temperature**: 0.5 (lower = follows instructions better)
-- **Max tokens**: 600 (maximum response length)
-
-To change the model, either:
-1. Set `OLLAMA_MODEL` in your `.env` file
-2. Or modify `OLLAMA_MODEL` directly in `backend/app.py`
-3. Make sure you've downloaded the model: `ollama pull <model-name>`
+- **Ollama model**: set `OLLAMA_MODEL` in `backend/.env` (e.g. `llama3.2`, `mistral`, `phi3`). Ensure the model is pulled: `ollama pull <model-name>`.
+- **Ollama URL**: set `OLLAMA_API_URL` in `backend/.env` if Ollama is not on `http://localhost:11434/api/chat`.
+- **Backend**: model and request options (temperature, max tokens) are in `backend/app.py`.

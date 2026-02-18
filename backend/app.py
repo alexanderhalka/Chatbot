@@ -80,15 +80,9 @@ PERSONALITIES = {
     }
 }
 
-# Constants
-# Message limit configuration - easily toggle for testing/release
-ENABLE_MESSAGE_LIMIT = False  # Set to False to disable message limits completely
-FREE_DAILY_MSG_LIMIT = 10    # Daily message limit per user (only used when ENABLE_MESSAGE_LIMIT = True)
-
-# In-memory storage for conversation history and user limits
+# In-memory storage for conversation history
 # In production, you'd want to use a database
 conversation_history = {}
-user_daily_counts = {}  # userId -> {date -> count}
 
 def get_user_id_from_header():
     """Extract user ID from x-user header"""
@@ -96,33 +90,6 @@ def get_user_id_from_header():
     if user_header.startswith('test-'):
         return user_header
     return 'test-anonymous'
-
-def check_daily_limit(user_id):
-    """Check if user has reached daily message limit"""
-    if not ENABLE_MESSAGE_LIMIT:
-        return False  # Message limits disabled
-    
-    today = date.today().isoformat()
-    
-    if user_id not in user_daily_counts:
-        user_daily_counts[user_id] = {}
-    
-    if today not in user_daily_counts[user_id]:
-        user_daily_counts[user_id][today] = 0
-    
-    return user_daily_counts[user_id][today] >= FREE_DAILY_MSG_LIMIT
-
-def increment_daily_count(user_id):
-    """Increment user's daily message count"""
-    today = date.today().isoformat()
-    
-    if user_id not in user_daily_counts:
-        user_daily_counts[user_id] = {}
-    
-    if today not in user_daily_counts[user_id]:
-        user_daily_counts[user_id][today] = 0
-    
-    user_daily_counts[user_id][today] += 1
 
 @app.route('/update-personality', methods=['POST'])
 def update_personality():
@@ -270,14 +237,6 @@ def chat():
         # Get user ID from header
         user_id = get_user_id_from_header()
         
-        # Check daily limit
-        if check_daily_limit(user_id):
-            return jsonify({
-                'error': 'Daily limit reached. Upgrade to keep chatting.',
-                'limit': FREE_DAILY_MSG_LIMIT,
-                'user_id': user_id
-            }), 429
-        
         data = request.get_json()
         user_message = data.get('message', '')
         session_id = data.get('session_id', 'default')
@@ -291,9 +250,6 @@ def chat():
         if personality not in all_personalities:
             personality = 'assistant'
         system_prompt = all_personalities[personality]['system_prompt']
-        
-        if not regenerate_only:
-            increment_daily_count(user_id)
         
         if session_id not in conversation_history:
             conversation_history[session_id] = [{"role": "system", "content": system_prompt}]
@@ -345,7 +301,6 @@ def chat():
             'status': 'success',
             'session_id': session_id,
             'user_id': user_id,
-            'daily_count': user_daily_counts[user_id][date.today().isoformat()],
             'personality': personality
         })
         
@@ -437,36 +392,6 @@ def chat_suggest_title():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
-@app.route('/user/status', methods=['GET'])
-def user_status():
-    """Get user's current status and daily count"""
-    user_id = get_user_id_from_header()
-    
-    if not ENABLE_MESSAGE_LIMIT:
-        return jsonify({
-            'user_id': user_id,
-            'daily_count': 0,
-            'daily_limit': 0,
-            'remaining': -1,  # -1 indicates unlimited
-            'limit_enabled': False
-        })
-    
-    today = date.today().isoformat()
-    
-    if user_id not in user_daily_counts:
-        user_daily_counts[user_id] = {}
-    
-    if today not in user_daily_counts[user_id]:
-        user_daily_counts[user_id][today] = 0
-    
-    return jsonify({
-        'user_id': user_id,
-        'daily_count': user_daily_counts[user_id][today],
-        'daily_limit': FREE_DAILY_MSG_LIMIT,
-        'remaining': FREE_DAILY_MSG_LIMIT - user_daily_counts[user_id][today],
-        'limit_enabled': True
-    })
 
 @app.route('/message/edit', methods=['PUT'])
 def edit_message():

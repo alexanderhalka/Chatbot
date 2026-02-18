@@ -572,23 +572,3 @@
   }
 }
 
-.limit-notice {
-  background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
-  color: white;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  margin-top: 0.75rem;
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
-  border: 2px solid #ff6b35;
-}
-
-.limit-notice p {
-  margin: 0;
-  line-height: 1.5;
-  font-size: 1.1rem;
-}
-
-

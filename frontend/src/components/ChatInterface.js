@@ -7,7 +7,6 @@ const ChatInterface = ({
   sessionId, 
   onSendMessage, 
   isLoading,
-  userStatus,
   onEditMessage,
   onDeleteMessage,
   onRedoAiMessage
@@ -78,11 +77,6 @@ const ChatInterface = ({
       sendMessage(e);
     }
   };
-
-  const isLimitReached = userStatus?.limit_enabled === false ? false : 
-    messages.some(msg => 
-      msg.sender === 'error' && msg.text.includes('Daily limit reached')
-    );
 
   // Focus and size textarea to fill the locked bubble (no resize of the box)
   useEffect(() => {
@@ -343,13 +337,12 @@ const ChatInterface = ({
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isLimitReached ? "Daily limit reached." : "Type your message here..."}
+            placeholder="Type your message here..."
             rows="1"
-            disabled={isLimitReached}
           />
           <button
             type="submit"
-            disabled={!inputMessage.trim() || isLoading || isLimitReached}
+            disabled={!inputMessage.trim() || isLoading}
             className="send-button"
           >
             <svg viewBox="0 0 24 24" fill="currentColor">
