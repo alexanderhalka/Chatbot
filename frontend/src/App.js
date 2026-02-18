@@ -128,6 +128,18 @@ function App() {
   };
 
   const createNewChat = () => {
+    const activeChat = chats.find(c => c.id === activeChatId);
+    // If already on an empty chat, do nothing
+    if (activeChat && (!activeChat.messages || activeChat.messages.length === 0)) {
+      return;
+    }
+    // If there's already an empty chat, switch to it instead of creating another
+    const existingEmptyChat = chats.find(c => !c.messages || c.messages.length === 0);
+    if (existingEmptyChat) {
+      setActiveChatId(existingEmptyChat.id);
+      saveUserChats(username, chats, existingEmptyChat.id, nextChatNumber);
+      return;
+    }
     const newChat = {
       id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       title: `Chat ${nextChatNumber}`,
@@ -135,14 +147,11 @@ function App() {
       lastMessage: null,
       personality: 'assistant' // Default personality
     };
-    
     const updatedChats = [...chats, newChat];
     setChats(updatedChats);
     setActiveChatId(newChat.id);
     const newNextNumber = nextChatNumber + 1;
     setNextChatNumber(newNextNumber);
-    
-    // Save to localStorage
     saveUserChats(username, updatedChats, newChat.id, newNextNumber);
   };
 
