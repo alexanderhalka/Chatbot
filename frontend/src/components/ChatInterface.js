@@ -159,6 +159,19 @@ const ChatInterface = ({
     handleEdit(index);
   };
 
+  const handleCopyFromMenu = async (e, index) => {
+    e.stopPropagation();
+    const text = messages[index]?.text;
+    if (text != null) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setOpenMessageMenuIndex(null);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    }
+  };
+
   const handleEditKeyPress = (e) => {
     if (e.key === 'Enter' && e.shiftKey === false) {
       e.preventDefault();
@@ -244,6 +257,13 @@ const ChatInterface = ({
                           </button>
                           {openMessageMenuIndex === index && (
                             <div className="message-menu-dropdown">
+                              <button
+                                type="button"
+                                className="message-menu-item"
+                                onClick={(e) => handleCopyFromMenu(e, index)}
+                              >
+                                Copy
+                              </button>
                               <button
                                 type="button"
                                 className="message-menu-item"
