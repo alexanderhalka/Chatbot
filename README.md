@@ -26,7 +26,10 @@ Chatbot/
 │   │   ├── App.js
 │   │   └── index.js
 │   └── package.json
-├── requirements.txt       # Python dependencies (Flask, CORS, dotenv, requests)
+├── requirements.txt        # Python dependencies (Flask, CORS, dotenv, requests)
+├── start_chatbot.py        # One-command runner: installs deps, starts backend + frontend
+├── start-chatbot.bat       # Windows: run this or  python start_chatbot.py
+├── start-chatbot.sh        # Mac/Linux: ./start-chatbot.sh  or  python start_chatbot.py
 └── README.md
 ```
 
@@ -38,7 +41,7 @@ Chatbot/
 
 ## Setup
 
-### 1. Ollama
+### 1. Ollama (required)
 
 1. Install from [ollama.ai](https://ollama.ai).
 2. Start Ollama (often automatic after install):
@@ -50,17 +53,19 @@ Chatbot/
    ollama pull llama3.2
    ```
 
-### 2. Backend
+### 2. Run the app (one command)
 
-From the **project root**:
+From the **project root** (the folder that contains `backend/` and `frontend/`), run:
 
 ```bash
-pip install -r requirements.txt
-cd backend
-python app.py
+python start_chatbot.py
 ```
 
-Backend runs at `http://localhost:5000`.
+On Windows you can run `start-chatbot.bat` instead. On Mac/Linux you can run `./start-chatbot.sh` (first time: `chmod +x start-chatbot.sh`).
+
+The script installs Python and frontend dependencies on first run, then starts the backend and frontend. Open `http://localhost:3000` in your browser. Press `Ctrl+C` in the terminal to stop both.
+
+**Prerequisites:** Python 3.7+, Node.js 14+, and Ollama installed.
 
 Optional: create `backend/.env` to override defaults:
 
@@ -68,16 +73,6 @@ Optional: create `backend/.env` to override defaults:
 OLLAMA_API_URL=http://localhost:11434/api/chat
 OLLAMA_MODEL=llama3.2
 ```
-
-### 3. Frontend
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-Frontend runs at `http://localhost:3000` and proxies API requests to the backend.
 
 ## Usage
 
