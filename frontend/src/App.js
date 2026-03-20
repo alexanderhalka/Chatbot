@@ -5,9 +5,10 @@ import ChatSidebar from './components/ChatSidebar';
 import UsernameInput from './components/UsernameInput';
 import PersonalityPicker from './components/PersonalityPicker';
 import ThemeToggle from './components/ThemeToggle';
-import { ThemeProvider } from './ThemeContext';
+import { useConfirm } from './ConfirmDialogContext';
 
 function App() {
+  const confirm = useConfirm();
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -452,10 +453,14 @@ function App() {
       return false;
     }
     
-    // Confirm deletion (warn that subsequent messages will also be deleted)
-    if (!window.confirm('Are you sure you want to delete this message? All messages after it will also be deleted.')) {
-      return false;
-    }
+    const ok = await confirm({
+      title: 'Delete message?',
+      message: 'Are you sure you want to delete this message? All messages after it will also be deleted.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      danger: true,
+    });
+    if (!ok) return false;
     
     const backendIndex = getBackendIndex(messageIndex, activeChat.messages);
     
@@ -556,13 +561,18 @@ function App() {
           <div className="main-content">
             <header className="app-header">
               <div className="header-content">
-                <h1>Choose Personality</h1>
-                <button onClick={() => setShowPersonalityPicker(false)} className="back-btn">
-                  Back to Chat
-                </button>
+                <div className="header-right">
+                  <button
+                    type="button"
+                    onClick={() => setShowPersonalityPicker(false)}
+                    className="back-btn back-btn--prominent"
+                  >
+                    ← Back to Chat
+                  </button>
+                </div>
               </div>
             </header>
-            <main className="chat-main">
+            <main className="chat-main chat-main--personality">
               <PersonalityPicker 
                 selectedPersonality={activeChat?.personality || 'assistant'}
                 onPersonalityChange={(personality) => {
@@ -581,58 +591,56 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <div className="App">
-        <div className="app-container">
-          <ChatSidebar 
-            chats={chats}
-            activeChatId={activeChatId}
-            onChatSelect={selectChat}
-            onNewChat={createNewChat}
-            onDeleteChat={deleteChat}
-            onRenameChat={renameChat}
-          />
-          <div className="main-content">
-            <header className="app-header">
-              <div className="header-content">
-                <div className="chat-header-title">
-                  <h1 title={activeChat ? activeChat.title : 'Chatbot'}>{activeChat ? activeChat.title : 'Chatbot'}</h1>
-                </div>
-                <div className="header-right">
-                  {activeChat && (
-                    <button 
-                      onClick={() => setShowPersonalityPicker(true)}
-                      className="personality-btn"
-                    >
-                      {getPersonalityIcon(activeChat.personality || 'assistant', personalities)} 
-                      {getPersonalityName(activeChat.personality || 'assistant', personalities)}
-                    </button>
-                  )}
-                  <ThemeToggle />
-                  <button onClick={handleLogout} className="logout-btn">
-                    Logout
-                  </button>
-                </div>
+    <div className="App">
+      <div className="app-container">
+        <ChatSidebar 
+          chats={chats}
+          activeChatId={activeChatId}
+          onChatSelect={selectChat}
+          onNewChat={createNewChat}
+          onDeleteChat={deleteChat}
+          onRenameChat={renameChat}
+        />
+        <div className="main-content">
+          <header className="app-header">
+            <div className="header-content">
+              <div className="chat-header-title">
+                <h1 title={activeChat ? activeChat.title : 'Chatbot'}>{activeChat ? activeChat.title : 'Chatbot'}</h1>
               </div>
-            </header>
-            <main className="chat-main">
-              {activeChat && (
-                <ChatInterface 
-                  messages={activeChat.messages}
-                  setMessages={(messages) => updateChatMessages(activeChatId, messages)}
-                  sessionId={activeChatId}
-                  onSendMessage={sendMessage}
-                  isLoading={isLoading}
-                  onEditMessage={editMessage}
-                  onDeleteMessage={deleteMessage}
-                  onRedoAiMessage={redoAiMessage}
-                />
-              )}
-            </main>
-          </div>
+              <div className="header-right">
+                {activeChat && (
+                  <button 
+                    onClick={() => setShowPersonalityPicker(true)}
+                    className="personality-btn"
+                  >
+                    {getPersonalityIcon(activeChat.personality || 'assistant', personalities)} 
+                    {getPersonalityName(activeChat.personality || 'assistant', personalities)}
+                  </button>
+                )}
+                <ThemeToggle />
+                <button onClick={handleLogout} className="logout-btn">
+                  Logout
+                </button>
+              </div>
+            </div>
+          </header>
+          <main className="chat-main">
+            {activeChat && (
+              <ChatInterface 
+                messages={activeChat.messages}
+                setMessages={(messages) => updateChatMessages(activeChatId, messages)}
+                sessionId={activeChatId}
+                onSendMessage={sendMessage}
+                isLoading={isLoading}
+                onEditMessage={editMessage}
+                onDeleteMessage={deleteMessage}
+                onRedoAiMessage={redoAiMessage}
+              />
+            )}
+          </main>
         </div>
       </div>
-    </ThemeProvider>
+    </div>
   );
 }
 

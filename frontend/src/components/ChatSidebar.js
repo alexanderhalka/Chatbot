@@ -1,7 +1,28 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useConfirm } from '../ConfirmDialogContext';
 import './ChatSidebar.css';
 
+const ChevronLeft = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M15 18l-6-6 6-6" />
+  </svg>
+);
+
+const ChevronRight = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
 const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteChat, onRenameChat }) => {
+  const confirm = useConfirm();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('chatbot_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingChatId, setEditingChatId] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -65,14 +86,17 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
     setOpenMenuId(openMenuId === chatId ? null : chatId);
   };
 
-  const handleDeleteChat = (e, chatId) => {
+  const handleDeleteChat = async (e, chatId) => {
     e.stopPropagation();
-    
-    if (window.confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
-      onDeleteChat(chatId);
-    }
-    
     setOpenMenuId(null);
+    const ok = await confirm({
+      title: 'Delete chat?',
+      message: 'Are you sure you want to delete this chat? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      danger: true,
+    });
+    if (ok) onDeleteChat(chatId);
   };
 
   const handleRenameChat = (e, chatId) => {
@@ -113,19 +137,69 @@ const ChatSidebar = ({ chats, activeChatId, onChatSelect, onNewChat, onDeleteCha
     onChatSelect(chatId);
   };
 
+  const toggleCollapse = (collapsed) => {
+    setSidebarCollapsed(collapsed);
+    try {
+      localStorage.setItem('chatbot_sidebar_collapsed', collapsed ? 'true' : 'false');
+    } catch {
+      /* ignore */
+    }
+  };
+
+  if (sidebarCollapsed) {
+    return (
+      <div className="chat-sidebar chat-sidebar--collapsed" aria-label="Collapsed chat navigation">
+        <div className="sidebar-collapsed-inner">
+          <button
+            type="button"
+            className="sidebar-icon-btn sidebar-expand-btn"
+            onClick={() => toggleCollapse(false)}
+            title="Open chat list"
+            aria-label="Open chat list"
+          >
+            <ChevronRight />
+          </button>
+          <button
+            type="button"
+            className="sidebar-icon-btn sidebar-collapsed-new-chat"
+            onClick={onNewChat}
+            title="New chat"
+            aria-label="New chat"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chat-sidebar">
       <div className="sidebar-header">
-        <h2>Chats</h2>
-        <button 
-          onClick={onNewChat} 
+        <div className="sidebar-header-top">
+          <h2>Chats</h2>
+          <button
+            type="button"
+            className="sidebar-icon-btn sidebar-collapse-btn"
+            onClick={() => toggleCollapse(true)}
+            title="Collapse chat list"
+            aria-label="Collapse chat list"
+          >
+            <ChevronLeft />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onNewChat}
           className="new-chat-btn"
           title="Start new chat"
         >
           New Chat
         </button>
       </div>
-      
+
       <div className="chat-list">
         {chats.map((chat) => (
           <div

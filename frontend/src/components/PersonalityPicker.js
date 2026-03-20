@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useConfirm } from '../ConfirmDialogContext';
 import './PersonalityPicker.css';
 
 const PersonalityPicker = ({ selectedPersonality, onPersonalityChange, onPersonalityCreated }) => {
+  const confirm = useConfirm();
   const [personalities, setPersonalities] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -153,7 +155,14 @@ const PersonalityPicker = ({ selectedPersonality, onPersonalityChange, onPersona
   };
 
   const handleDeletePersonality = async (personalityKey) => {
-    if (window.confirm('Are you sure you want to delete this custom personality?')) {
+    const ok = await confirm({
+      title: 'Delete personality?',
+      message: 'Are you sure you want to delete this custom personality?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      danger: true,
+    });
+    if (ok) {
       try {
         const response = await fetch(`/personalities/${personalityKey}`, {
           method: 'DELETE'
@@ -202,29 +211,16 @@ const PersonalityPicker = ({ selectedPersonality, onPersonalityChange, onPersona
   if (isLoading) {
     return (
       <div className="personality-picker">
-        <div className="picker-header">
-          <h3>Choose AI Personality</h3>
+        <div className="personality-picker-scroll">
+          <div className="loading">Loading personalities...</div>
         </div>
-        <div className="loading">Loading personalities...</div>
       </div>
     );
   }
 
   return (
     <div className="personality-picker">
-      <div className="picker-header">
-        <h3>Choose AI Personality</h3>
-        <p>Select how your AI companion should behave</p>
-        {!showCreateForm && (
-          <button 
-            className="create-personality-btn"
-            onClick={() => setShowCreateForm(true)}
-          >
-            + Create Custom Personality
-          </button>
-        )}
-      </div>
-      
+      <div className="personality-picker-scroll">
       {showCreateForm ? (
         <div className="create-form">
           <div className="form-header">
@@ -384,9 +380,19 @@ const PersonalityPicker = ({ selectedPersonality, onPersonalityChange, onPersona
                 </div>
               ))}
             </div>
+            {!showCreateForm && (
+              <button
+                type="button"
+                className="create-personality-btn"
+                onClick={() => setShowCreateForm(true)}
+              >
+                + Create Custom Personality
+              </button>
+            )}
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useConfirm } from '../ConfirmDialogContext';
 import './ChatInterface.css';
 
 const ChatInterface = ({ 
@@ -11,6 +12,7 @@ const ChatInterface = ({
   onDeleteMessage,
   onRedoAiMessage
 }) => {
+  const confirm = useConfirm();
   // Draft message per chat: { [sessionId]: string } so switching chats preserves in-progress text
   const [draftBySession, setDraftBySession] = useState({});
   // Edit state per chat: { [sessionId]: { editingIndex, editText } } so switching chats preserves in-progress edits
@@ -137,10 +139,13 @@ const ChatInterface = ({
     }
     const hasSubsequentMessages = editingIndex < messages.length - 1;
     if (hasSubsequentMessages) {
-      const confirmSave = window.confirm(
-        'Editing this message will delete all messages after it. Continue?'
-      );
-      if (!confirmSave) return;
+      const ok = await confirm({
+        title: 'Edit message?',
+        message: 'Editing this message will delete all messages after it. Continue?',
+        confirmLabel: 'Save',
+        cancelLabel: 'Cancel',
+      });
+      if (!ok) return;
     }
     const indexToSave = editingIndex;
     const textToSave = editText.trim();

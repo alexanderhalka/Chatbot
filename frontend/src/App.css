@@ -27,6 +27,8 @@ body.dark-mode {
 }
 
 .App {
+  width: 100%;
+  min-height: 100vh;
   height: 100vh;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -39,18 +41,19 @@ body.dark-mode {
 
 .app-container {
   display: flex;
+  width: 100%;
+  max-width: none;
   height: 100vh;
-  max-width: 1400px;
-  margin: 0 auto;
+  margin: 0;
   background: white;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   position: relative;
   transition: background-color 0.3s ease;
 }
 
 .dark-mode .app-container {
   background: #1a1a1a;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 .main-content {
@@ -82,8 +85,9 @@ body.dark-mode {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   gap: 1rem;
   min-width: 0;
 }
@@ -150,6 +154,23 @@ body.dark-mode {
   border-color: rgba(255, 255, 255, 0.5);
 }
 
+.back-btn--prominent {
+  padding: 0.55rem 1.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-width: 2px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-btn--prominent:hover {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
 .logout-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -181,6 +202,13 @@ body.dark-mode {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Personality picker: fills width and height under header */
+.chat-main--personality {
+  padding: 0;
   overflow: hidden;
 }
 
