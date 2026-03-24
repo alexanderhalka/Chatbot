@@ -1,146 +1,89 @@
-# ChatGPT Clone
+# Chatbot
 
-A simple ChatGPT clone built with React frontend and Python Flask backend, integrated with OpenAI's GPT API.
+A chat application with a React frontend and Flask backend, using **Ollama** for local, private AI inference. Multiple chats, personalities, message edit/delete/redo, and auto-generated chat titles.
 
 ## Features
 
-- 🚀 Modern, responsive UI similar to ChatGPT
-- 💬 Real-time chat interface with OpenAI GPT-3.5-turbo
-- 🎨 Beautiful gradient design with smooth animations
-- 📱 Mobile-responsive design
-- ⚡ Fast and lightweight
+- **Local AI** – Ollama runs on your machine; no API keys or usage limits
+- **Multiple chats** – Separate conversations with per-chat draft messages
+- **Auto chat names** – New chats start as "New Chat"; after the first exchange, the app suggests a title from context
+- **Personalities** – Built-in (Assistant, Coach, Therapist, Study Buddy, Bestie, etc.) and custom personalities
+- **Message actions** – Edit and delete your messages; redo AI replies. Three-dot menu per message (Copy, Edit, Delete for user; Redo, Copy for AI)
+- **Theme** – Light/dark mode toggle
+- **Responsive UI** – Works on desktop and mobile; chat list with truncation and tooltips
+- **Persistence** – Chats and settings stored in the browser (localStorage)
 
-## Project Structure
+## Project structure
 
 ```
 Chatbot/
-├── backend/           # Python Flask API
-│   ├── app.py        # Main Flask application
-│   ├── requirements.txt
-│   └── env.example   # Environment variables template
-├── frontend/         # React application
+├── backend/
+│   └── app.py              # Flask API (chat, personalities, suggest-title, etc.)
+├── frontend/
 │   ├── public/
 │   ├── src/
-│   │   ├── components/
+│   │   ├── components/     # ChatInterface, ChatSidebar, PersonalityPicker, etc.
 │   │   ├── App.js
 │   │   └── index.js
 │   └── package.json
+├── requirements.txt        # Python dependencies (Flask, CORS, dotenv, requests)
+├── start_chatbot.py        # One-command runner: installs deps, starts backend + frontend
+├── start-chatbot.bat       # Windows: run this or  python start_chatbot.py
+├── start-chatbot.sh        # Mac/Linux: ./start-chatbot.sh  or  python start_chatbot.py
 └── README.md
 ```
 
 ## Prerequisites
 
-- Python 3.7+
-- Node.js 14+
-- OpenAI API key
+- **Python 3.7+**
+- **Node.js 14+**
+- **Ollama** – [Install](https://ollama.ai) and have it running (e.g. `ollama serve`). Default model: `llama3.2`.
 
-## Setup Instructions
+## Setup
 
-### 1. Backend Setup
+### 1. Ollama (required)
 
-1. Navigate to the backend directory:
+1. Install from [ollama.ai](https://ollama.ai).
+2. Start Ollama (often automatic after install):
    ```bash
-   cd backend
+   ollama serve
    ```
-
-2. Create a virtual environment (recommended):
+3. Pull a model (default is `llama3.2`):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ollama pull llama3.2
    ```
 
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Run the app (one command)
 
-4. Set up environment variables:
-   ```bash
-   cp env.example .env
-   ```
-   Edit `.env` and add your OpenAI API key:
-   ```
-   OPENAI_API_KEY=your_actual_api_key_here
-   ```
+From the **project root** (the folder that contains `backend/` and `frontend/`), run:
 
-5. Start the Flask server:
-   ```bash
-   python app.py
-   ```
-   The backend will run on `http://localhost:5000`
+```bash
+python start_chatbot.py
+```
 
-### 2. Frontend Setup
+On Windows you can run `start-chatbot.bat` instead. On Mac/Linux you can run `./start-chatbot.sh` (first time: `chmod +x start-chatbot.sh`).
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
+The script installs Python and frontend dependencies on first run, then starts the backend and frontend. Open `http://localhost:3000` in your browser. Press `Ctrl+C` in the terminal to stop both.
 
-2. Install Node.js dependencies:
-   ```bash
-   npm install
-   ```
+**Prerequisites:** Python 3.7+, Node.js 14+, and Ollama installed.
 
-3. Start the React development server:
-   ```bash
-   npm start
-   ```
-   The frontend will run on `http://localhost:3000`
+Optional: create `backend/.env` to override defaults:
+
+```
+OLLAMA_API_URL=http://localhost:11434/api/chat
+OLLAMA_MODEL=llama3.2
+```
 
 ## Usage
 
-1. Open your browser and go to `http://localhost:3000`
-2. Type your message in the input box
-3. Press Enter or click the send button
-4. Wait for the AI response
-5. Continue the conversation!
-
-## API Endpoints
-
-- `POST /chat` - Send a message and get AI response
-- `GET /health` - Health check endpoint
+1. Open `http://localhost:3000`.
+2. Enter a username.
+3. Start or select a chat; pick a personality from the header if you like.
+4. Type in the message box and send. The first user + AI exchange is used to suggest a chat title if it’s still "New Chat".
+5. Use the three-dot menu on messages to edit, delete, redo (AI), or copy.
 
 ## Configuration
 
-### OpenAI API
-- Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-- Add it to the `.env` file in the backend directory
-
-### Model Settings
-You can modify the AI model settings in `backend/app.py`:
-- Model: Currently using `gpt-3.5-turbo`
-- Max tokens: 1000
-- Temperature: 0.7
-
-## Security Notes
-
-- Never commit your `.env` file to version control
-- The `.env` file is already in `.gitignore`
-- Keep your OpenAI API key secure
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CORS errors**: Make sure the backend is running on port 5000
-2. **API key errors**: Verify your OpenAI API key is correct and has sufficient credits
-3. **Port conflicts**: Change the port in `app.py` if port 5000 is in use
-
-### Error Messages
-
-- "No message provided": Make sure you're sending a message in the request
-- "OpenAI API error": Check your API key and internet connection
-
-## Technologies Used
-
-- **Backend**: Python, Flask, OpenAI API
-- **Frontend**: React, CSS3
-- **Styling**: Modern CSS with gradients and animations
-
-## License
-
-This project is for educational purposes. Please respect OpenAI's terms of service.
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
+- **Ollama model**: set `OLLAMA_MODEL` in `backend/.env` (e.g. `llama3.2`, `mistral`, `phi3`). Ensure the model is pulled: `ollama pull <model-name>`.
+- **Ollama URL**: set `OLLAMA_API_URL` in `backend/.env` if Ollama is not on `http://localhost:11434/api/chat`.
+- **Backend**: model and request options (temperature, max tokens) are in `backend/app.py`.

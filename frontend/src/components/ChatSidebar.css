@@ -5,12 +5,26 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  z-index: 10;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .chat-sidebar {
+  background: #1a1a1a;
+  border-right: 1px solid #404040;
 }
 
 .sidebar-header {
   padding: 1rem;
   border-bottom: 1px solid #e1e5e9;
   background: white;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .sidebar-header {
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
 }
 
 .sidebar-header h2 {
@@ -18,6 +32,11 @@
   font-size: 1.25rem;
   color: #333;
   font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.dark-mode .sidebar-header h2 {
+  color: #ffffff;
 }
 
 .new-chat-btn {
@@ -42,6 +61,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem;
+  position: relative;
 }
 
 .chat-item {
@@ -52,6 +72,17 @@
   transition: all 0.2s ease;
   background: white;
   border: 1px solid transparent;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  min-height: 60px;
+  overflow: visible;
+}
+
+.dark-mode .chat-item {
+  background: #2d2d2d;
+  color: #ffffff;
 }
 
 .chat-item:hover {
@@ -59,7 +90,18 @@
   border-color: #e1e5e9;
 }
 
+.dark-mode .chat-item:hover {
+  background: #404040;
+  border-color: #555555;
+}
+
 .chat-item.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.dark-mode .chat-item.active {
   background: #007bff;
   color: white;
   border-color: #007bff;
@@ -69,11 +111,18 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chat-title {
   font-weight: 500;
   font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .chat-preview {
@@ -82,10 +131,177 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
 }
 
 .chat-item.active .chat-preview {
   opacity: 0.9;
+}
+
+.rename-form {
+  width: 100%;
+  min-width: 0;
+}
+
+.rename-input {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: white;
+  color: #333;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  max-width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .rename-input {
+  background: #2d2d2d;
+  color: #ffffff;
+  border-color: #4a9eff;
+}
+
+.rename-input:focus {
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.dark-mode .rename-input:focus {
+  border-color: #66b3ff;
+  box-shadow: 0 0 0 2px rgba(102, 179, 255, 0.25);
+}
+
+.chat-item.active .rename-input {
+  background: white;
+  color: #333;
+  border-color: #0056b3;
+}
+
+.dark-mode .chat-item.active .rename-input {
+  background: #2d2d2d;
+  color: #ffffff;
+  border-color: #66b3ff;
+}
+
+.chat-menu {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.chat-item:hover .chat-menu,
+.chat-menu.open {
+  opacity: 1;
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  color: #000;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #000;
+}
+
+.chat-item.active .menu-button {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.chat-item.active .menu-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Dark mode menu button styles */
+.dark-mode .menu-button {
+  color: #fff;
+}
+
+.dark-mode .menu-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 120px;
+  margin-top: 0.25rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-mode .menu-dropdown {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #333;
+  transition: background-color 0.2s ease, color 0.3s ease;
+}
+
+.dark-mode .menu-item {
+  color: #ffffff;
+}
+
+.menu-item:hover {
+  background: #f8f9fa;
+}
+
+.dark-mode .menu-item:hover {
+  background: #404040;
+}
+
+.menu-item.delete {
+  color: #dc3545;
+}
+
+.dark-mode .menu-item.delete {
+  color: #ff6b6b;
+}
+
+.menu-item.delete:hover {
+  background: #fee;
+}
+
+.dark-mode .menu-item.delete:hover {
+  background: #4a2a2a;
 }
 
 /* Scrollbar styling */
