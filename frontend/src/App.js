@@ -7,13 +7,29 @@ import PersonalityPicker from './components/PersonalityPicker';
 import ThemeToggle from './components/ThemeToggle';
 import { useConfirm } from './ConfirmDialogContext';
 
+const userHeaders = (username) => ({
+  'Content-Type': 'application/json',
+  'x-user': `test-${username}`,
+});
+
+function normalizeMessagesFromApi(messages) {
+  if (!messages || !messages.length) return [];
+  return messages.map((m) => ({
+    id: m.id,
+    text: m.text,
+    sender: m.sender,
+    timestamp: m.timestamp
+      ? new Date(m.timestamp).toLocaleTimeString()
+      : new Date().toLocaleTimeString(),
+  }));
+}
+
 function App() {
   const confirm = useConfirm();
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [nextChatNumber, setNextChatNumber] = useState(1);
   const [username, setUsername] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showPersonalityPicker, setShowPersonalityPicker] = useState(false);
@@ -30,46 +46,96 @@ function App() {
     }
   };
 
-  // Load user's chats from localStorage
-  const loadUserChats = (username) => {
-    const userChatsKey = `chatbot_chats_${username}`;
-    const savedChats = localStorage.getItem(userChatsKey);
-    
-    if (savedChats) {
-      const parsedChats = JSON.parse(savedChats);
-      setChats(parsedChats.chats);
-      setActiveChatId(parsedChats.activeChatId);
-      setNextChatNumber(parsedChats.nextChatNumber);
-      setIsInitialized(true);
-    } else {
-      // Create initial chat for new user
+  const activeChatStorageKey = (u) => `chatbot_active_${u}`;
+
+  const persistActiveChatId = (u, chatId) => {
+    if (u && chatId) localStorage.setItem(activeChatStorageKey(u), chatId);
+  };
+
+  // Load user's chats from API (PostgreSQL via backend)
+  const loadUserChats = async (u) => {
+    try {
+      const res = await fetch(
+        `/api/users/${encodeURIComponent(u)}/chats`,
+        { headers: userHeaders(u) }
+      );
+      if (!res.ok) throw new Error('Failed to load chats');
+      const data = await res.json();
+      let list = data.chats || [];
+
+      if (list.length === 0) {
+        const initialChat = {
+          id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          title: 'New Chat',
+          messages: [],
+          lastMessage: null,
+          personality: 'assistant',
+        };
+        const createRes = await fetch(
+          `/api/users/${encodeURIComponent(u)}/chats`,
+          {
+            method: 'POST',
+            headers: userHeaders(u),
+            body: JSON.stringify({
+              id: initialChat.id,
+              title: initialChat.title,
+              personality: initialChat.personality,
+            }),
+          }
+        );
+        if (!createRes.ok) throw new Error('Failed to create initial chat');
+        list = [
+          {
+            id: initialChat.id,
+            title: initialChat.title,
+            personality: initialChat.personality,
+            lastMessage: null,
+            messageCount: 0,
+          },
+        ];
+      }
+
+      let chatsState = list.map((c) => ({
+        id: c.id,
+        title: c.title,
+        personality: c.personality || 'assistant',
+        messages: [],
+        lastMessage: c.lastMessage,
+      }));
+
+      let activeId = localStorage.getItem(activeChatStorageKey(u));
+      if (!activeId || !chatsState.some((c) => c.id === activeId)) {
+        activeId = chatsState[0].id;
+      }
+
+      const msgRes = await fetch(`/api/chats/${encodeURIComponent(activeId)}/messages`, {
+        headers: userHeaders(u),
+      });
+      if (msgRes.ok) {
+        const msgData = await msgRes.json();
+        const normalized = normalizeMessagesFromApi(msgData.messages);
+        chatsState = chatsState.map((c) =>
+          c.id === activeId ? { ...c, messages: normalized } : c
+        );
+      }
+
+      setChats(chatsState);
+      setActiveChatId(activeId);
+      persistActiveChatId(u, activeId);
+    } catch (e) {
+      console.error('Error loading chats:', e);
       const initialChat = {
         id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         title: 'New Chat',
         messages: [],
         lastMessage: null,
-        personality: 'assistant' // Default personality
+        personality: 'assistant',
       };
-      
       setChats([initialChat]);
       setActiveChatId(initialChat.id);
-      setNextChatNumber(2);
+    } finally {
       setIsInitialized(true);
-      
-      // Save to localStorage
-      saveUserChats(username, [initialChat], initialChat.id, 2);
     }
-  };
-
-  // Save user's chats to localStorage
-  const saveUserChats = (username, chats, activeChatId, nextChatNumber) => {
-    const userChatsKey = `chatbot_chats_${username}`;
-    const chatData = {
-      chats,
-      activeChatId,
-      nextChatNumber
-    };
-    localStorage.setItem(userChatsKey, JSON.stringify(chatData));
   };
 
   // Check for saved username on app start
@@ -91,11 +157,11 @@ function App() {
   }, [username, showLogin]);
 
   const handleLogout = () => {
+    if (username) localStorage.removeItem(activeChatStorageKey(username));
     localStorage.removeItem('chatbot_username');
     setUsername(null);
     setChats([]);
     setActiveChatId(null);
-    setNextChatNumber(1);
     setIsInitialized(false);
     setShowLogin(true);
     setShowPersonalityPicker(false);
@@ -111,17 +177,28 @@ function App() {
     }
   };
 
-  const createNewChat = () => {
-    const activeChat = chats.find(c => c.id === activeChatId);
-    // If already on an empty chat, do nothing
+  const createNewChat = async () => {
+    const activeChat = chats.find((c) => c.id === activeChatId);
     if (activeChat && (!activeChat.messages || activeChat.messages.length === 0)) {
       return;
     }
-    // If there's already an empty chat, switch to it instead of creating another
-    const existingEmptyChat = chats.find(c => !c.messages || c.messages.length === 0);
+    const existingEmptyChat = chats.find((c) => !c.messages || c.messages.length === 0);
     if (existingEmptyChat) {
       setActiveChatId(existingEmptyChat.id);
-      saveUserChats(username, chats, existingEmptyChat.id, nextChatNumber);
+      persistActiveChatId(username, existingEmptyChat.id);
+      const msgRes = await fetch(
+        `/api/chats/${encodeURIComponent(existingEmptyChat.id)}/messages`,
+        { headers: userHeaders(username) }
+      );
+      if (msgRes.ok) {
+        const msgData = await msgRes.json();
+        const normalized = normalizeMessagesFromApi(msgData.messages);
+        setChats((prev) =>
+          prev.map((c) =>
+            c.id === existingEmptyChat.id ? { ...c, messages: normalized } : c
+          )
+        );
+      }
       return;
     }
     const newChat = {
@@ -129,108 +206,151 @@ function App() {
       title: 'New Chat',
       messages: [],
       lastMessage: null,
-      personality: 'assistant' // Default personality
+      personality: 'assistant',
     };
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(username)}/chats`, {
+        method: 'POST',
+        headers: userHeaders(username),
+        body: JSON.stringify({
+          id: newChat.id,
+          title: newChat.title,
+          personality: newChat.personality,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create chat');
+    } catch (e) {
+      console.error(e);
+    }
     const updatedChats = [...chats, newChat];
     setChats(updatedChats);
     setActiveChatId(newChat.id);
-    const newNextNumber = nextChatNumber + 1;
-    setNextChatNumber(newNextNumber);
-    saveUserChats(username, updatedChats, newChat.id, newNextNumber);
+    persistActiveChatId(username, newChat.id);
   };
 
-  const selectChat = (chatId) => {
+  const selectChat = async (chatId) => {
     setActiveChatId(chatId);
-    // Save active chat change to localStorage
-    saveUserChats(username, chats, chatId, nextChatNumber);
+    persistActiveChatId(username, chatId);
+    try {
+      const msgRes = await fetch(`/api/chats/${encodeURIComponent(chatId)}/messages`, {
+        headers: userHeaders(username),
+      });
+      if (!msgRes.ok) return;
+      const msgData = await msgRes.json();
+      const normalized = normalizeMessagesFromApi(msgData.messages);
+      setChats((prev) =>
+        prev.map((c) => (c.id === chatId ? { ...c, messages: normalized } : c))
+      );
+    } catch (e) {
+      console.error('Error loading messages:', e);
+    }
   };
 
-  const deleteChat = (chatId) => {
-    const filteredChats = chats.filter(chat => chat.id !== chatId);
+  const deleteChat = async (chatId) => {
+    try {
+      await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+        method: 'DELETE',
+        headers: userHeaders(username),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+
+    const filteredChats = chats.filter((chat) => chat.id !== chatId);
     let newActiveChatId = activeChatId;
-    let newNextNumber = nextChatNumber;
-    
-    // If we're deleting the active chat, switch to another chat
+
     if (chatId === activeChatId) {
       if (filteredChats.length > 0) {
         newActiveChatId = filteredChats[0].id;
       } else {
-        // If no chats left, create a new one
         const newChat = {
           id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           title: 'New Chat',
           messages: [],
           lastMessage: null,
-          personality: 'assistant'
+          personality: 'assistant',
         };
+        try {
+          await fetch(`/api/users/${encodeURIComponent(username)}/chats`, {
+            method: 'POST',
+            headers: userHeaders(username),
+            body: JSON.stringify({
+              id: newChat.id,
+              title: newChat.title,
+              personality: newChat.personality,
+            }),
+          });
+        } catch (e) {
+          console.error(e);
+        }
         filteredChats.push(newChat);
         newActiveChatId = newChat.id;
-        newNextNumber = 2; // Reset counter for fresh start
       }
     }
-    
+
     setChats(filteredChats);
     setActiveChatId(newActiveChatId);
-    setNextChatNumber(newNextNumber);
-    
-    // Save to localStorage
-    saveUserChats(username, filteredChats, newActiveChatId, newNextNumber);
+    persistActiveChatId(username, newActiveChatId);
+
+    if (newActiveChatId) {
+      try {
+        const msgRes = await fetch(
+          `/api/chats/${encodeURIComponent(newActiveChatId)}/messages`,
+          { headers: userHeaders(username) }
+        );
+        if (msgRes.ok) {
+          const msgData = await msgRes.json();
+          const normalized = normalizeMessagesFromApi(msgData.messages);
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === newActiveChatId ? { ...c, messages: normalized } : c
+            )
+          );
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
-  const renameChat = (chatId, newTitle) => {
-    // Validate the new title
+  const renameChat = async (chatId, newTitle) => {
     if (!newTitle || newTitle.trim().length === 0) {
-      return; // Don't rename if empty
+      return;
     }
-    
     const sanitizedTitle = newTitle.trim();
-    
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, title: sanitizedTitle }
-        : chat
+    try {
+      const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+        method: 'PATCH',
+        headers: userHeaders(username),
+        body: JSON.stringify({ title: sanitizedTitle }),
+      });
+      if (!res.ok) throw new Error('Rename failed');
+    } catch (e) {
+      console.error(e);
+    }
+    const updatedChats = chats.map((chat) =>
+      chat.id === chatId ? { ...chat, title: sanitizedTitle } : chat
     );
-    
     setChats(updatedChats);
-    
-    // Save to localStorage
-    saveUserChats(username, updatedChats, activeChatId, nextChatNumber);
   };
 
   const updateChatPersonality = (chatId, personality) => {
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, personality }
-        : chat
+    const updatedChats = chats.map((chat) =>
+      chat.id === chatId ? { ...chat, personality } : chat
     );
-    
     setChats(updatedChats);
-    
-    // Save to localStorage
-    saveUserChats(username, updatedChats, activeChatId, nextChatNumber);
-    
-    // Update personality on backend
     updatePersonalityOnBackend(chatId, personality);
   };
 
   const updatePersonalityOnBackend = async (chatId, personality) => {
     try {
-      const response = await fetch('/update-personality', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user': `test-${username}`
-        },
-        body: JSON.stringify({
-          session_id: chatId,
-          personality: personality
-        })
+      const response = await fetch(`/api/chats/${encodeURIComponent(chatId)}`, {
+        method: 'PATCH',
+        headers: userHeaders(username),
+        body: JSON.stringify({ personality }),
       });
-      
       const data = await response.json();
-      if (data.status === 'success') {
-        console.log(`Personality updated to ${personality}`);
-      } else {
+      if (!response.ok) {
         console.error('Failed to update personality:', data.error);
       }
     } catch (error) {
@@ -243,16 +363,17 @@ function App() {
   };
 
   const updateChatMessages = (chatId, messages) => {
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, messages, lastMessage: messages.length > 0 ? messages[messages.length - 1].text : null }
+    const updatedChats = chats.map((chat) =>
+      chat.id === chatId
+        ? {
+            ...chat,
+            messages,
+            lastMessage:
+              messages.length > 0 ? messages[messages.length - 1].text : null,
+          }
         : chat
     );
-    
     setChats(updatedChats);
-    
-    // Save to localStorage
-    saveUserChats(username, updatedChats, activeChatId, nextChatNumber);
   };
 
   const sendMessage = async (message) => {
@@ -317,13 +438,18 @@ function App() {
             .then(r => r.json())
             .then((suggestData) => {
               const title = (suggestData.title || '').trim().slice(0, 200) || 'New Chat';
-              setChats(prev => {
-                const chat = prev.find(c => c.id === activeChatId);
+              setChats((prev) => {
+                const chat = prev.find((c) => c.id === activeChatId);
                 if (!chat || chat.title !== 'New Chat') return prev;
-                const next = prev.map(c => c.id === activeChatId ? { ...c, title } : c);
-                saveUserChats(username, next, activeChatId, nextChatNumber);
-                return next;
+                return prev.map((c) =>
+                  c.id === activeChatId ? { ...c, title } : c
+                );
               });
+              fetch(`/api/chats/${encodeURIComponent(activeChatId)}`, {
+                method: 'PATCH',
+                headers: userHeaders(username),
+                body: JSON.stringify({ title }),
+              }).catch(() => {});
             })
             .catch(() => {});
         }
@@ -679,7 +805,7 @@ const getPersonalityName = (personalityKey, personalities) => {
     best_friend: 'Best Friend (chill)',
     romantic_partner: 'Partner'
   };
-  return names[personalityKey] || 'AI';
+  return names[personalityKey] || 'Assistant';
 };
 
 export default App;

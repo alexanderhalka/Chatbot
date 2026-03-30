@@ -55,7 +55,7 @@ def main():
     install_deps()
     print("Starting backend and frontend...")
     backend = subprocess.Popen(
-        [sys.executable, "app.py"],
+        [sys.executable, "run.py"],
         cwd=BACKEND_DIR,
         stdout=sys.stdout,
         stderr=sys.stderr,
